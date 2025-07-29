@@ -1,10 +1,10 @@
-run<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRUMBLE - Media Streaming</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -38,8 +38,7 @@ run<!DOCTYPE html>
                 
                 <button class="nav-item" data-tab="library">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
                     </svg>
                     <span class="nav-label">Library</span>
                 </button>
@@ -47,7 +46,7 @@ run<!DOCTYPE html>
                 <button class="nav-item" data-tab="settings">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                     </svg>
                     <span class="nav-label">Settings</span>
                 </button>
@@ -65,29 +64,37 @@ run<!DOCTYPE html>
                 <div class="content-sections">
                     <section class="catalog-section" id="trending-movies">
                         <h2 class="section-title">Trending Movies</h2>
-                        <div class="catalog-grid" id="trending-movies-grid">
-                            <!-- Content will be dynamically loaded -->
+                        <div class="carousel-container">
+                            <div class="carousel-track" id="trending-movies-grid">
+                                <!-- Content will be dynamically loaded -->
+                            </div>
                         </div>
                     </section>
                     
                     <section class="catalog-section" id="popular-movies">
                         <h2 class="section-title">Popular Movies</h2>
-                        <div class="catalog-grid" id="popular-movies-grid">
-                            <!-- Content will be dynamically loaded -->
+                        <div class="carousel-container">
+                            <div class="carousel-track" id="popular-movies-grid">
+                                <!-- Content will be dynamically loaded -->
+                            </div>
                         </div>
                     </section>
                     
                     <section class="catalog-section" id="trending-series">
                         <h2 class="section-title">Trending Series</h2>
-                        <div class="catalog-grid" id="trending-series-grid">
-                            <!-- Content will be dynamically loaded -->
+                        <div class="carousel-container">
+                            <div class="carousel-track" id="trending-series-grid">
+                                <!-- Content will be dynamically loaded -->
+                            </div>
                         </div>
                     </section>
                     
                     <section class="catalog-section" id="popular-series">
                         <h2 class="section-title">Popular Series</h2>
-                        <div class="catalog-grid" id="popular-series-grid">
-                            <!-- Content will be dynamically loaded -->
+                        <div class="carousel-container">
+                            <div class="carousel-track" id="popular-series-grid">
+                                <!-- Content will be dynamically loaded -->
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -185,8 +192,18 @@ run<!DOCTYPE html>
                             <h2>API Configuration</h2>
                             <div class="setting-item">
                                 <label for="tmdb-api-key">TMDB API Key</label>
-                                <input type="password" id="tmdb-api-key" placeholder="Enter your TMDB API key (optional)">
-                                <p class="setting-description">Use your own TMDB API key for higher rate limits. Leave empty to use default.</p>
+                                <div class="tmdb-api-controls">
+                                    <input type="password" id="tmdb-api-key" placeholder="Enter your TMDB API key (optional)">
+                                    <button id="save-tmdb-key" class="btn-secondary save-btn">Save</button>
+                                </div>
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="toggle-default-tmdb" checked>
+                                        <span class="toggle-slider"></span>
+                                        Use Default TMDB API
+                                    </label>
+                                </div>
+                                <p class="setting-description">Use your own TMDB API key for higher rate limits. Toggle off default API to use only your key.</p>
                             </div>
                         </section>
                         
@@ -338,6 +355,8 @@ run<!DOCTYPE html>
     <script src="LibraryTab.js"></script>
     <script src="SettingsTab.js"></script>
     <script src="CatalogGrid.js"></script>
+    <script src="CatalogCarousel.js?v=2"></script>
+    <script src="MediaDetailsModal.js"></script>
     <script src="HeroBanner.js"></script>
     <script src="StreamListModal.js"></script>
     <script src="ExternalPlayerHandler.js"></script>

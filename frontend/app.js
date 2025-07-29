@@ -2,7 +2,7 @@
 class CrumbleApp {
     constructor() {
         this.currentTab = 'home';
-        this.tmdbApiKey = localStorage.getItem('tmdb_api_key') || '90acb3adf6e0af93b6c0055ed8a721aa';
+        this.initializeTmdbApiKey();
         this.baseImageUrl = 'https://image.tmdb.org/t/p/w500';
         this.baseBackdropUrl = 'https://image.tmdb.org/t/p/w1280';
         this.addons = JSON.parse(localStorage.getItem('stremio_addons') || '[]');
@@ -25,6 +25,21 @@ class CrumbleApp {
         this.addonDiagnostics = new AddonDiagnostics(this);
         
         this.init();
+    }
+
+    initializeTmdbApiKey() {
+        const defaultKey = '90acb3adf6e0af93b6c0055ed8a721aa';
+        const userKey = localStorage.getItem('user_tmdb_api_key') || '';
+        const useDefault = localStorage.getItem('use_default_tmdb') !== 'false';
+        
+        if (useDefault) {
+            this.tmdbApiKey = userKey || defaultKey;
+        } else {
+            this.tmdbApiKey = userKey;
+        }
+        
+        // Ensure the effective key is stored
+        localStorage.setItem('tmdb_api_key', this.tmdbApiKey);
     }
 
     init() {
@@ -198,6 +213,11 @@ class CrumbleApp {
         // Stream modal setup
         if (window.StreamListModal) {
             window.streamModal = new StreamListModal(this);
+        }
+        
+        // Media details modal setup
+        if (window.MediaDetailsModal) {
+            window.mediaDetailsModal = new MediaDetailsModal(this);
         }
     }
 

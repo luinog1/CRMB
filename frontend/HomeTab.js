@@ -2,7 +2,7 @@
 class HomeTab {
     constructor(app) {
         this.app = app;
-        this.catalogGrid = new CatalogGrid(app);
+        this.catalogCarousel = new CatalogCarousel(app);
         this.heroBanner = new HeroBanner(app);
     }
 
@@ -48,7 +48,7 @@ class HomeTab {
             const container = document.getElementById('trending-movies-grid');
             
             if (container) {
-                this.catalogGrid.render(container, data.results, 'movie');
+                this.catalogCarousel.render(container, data.results.slice(0, 20), 'movie');
                 this.showSection('trending-movies');
             }
         } catch (error) {
@@ -63,7 +63,7 @@ class HomeTab {
             const container = document.getElementById('popular-movies-grid');
             
             if (container) {
-                this.catalogGrid.render(container, data.results, 'movie');
+                this.catalogCarousel.render(container, data.results.slice(0, 20), 'movie');
                 this.showSection('popular-movies');
             }
         } catch (error) {
@@ -78,7 +78,7 @@ class HomeTab {
             const container = document.getElementById('trending-series-grid');
             
             if (container) {
-                this.catalogGrid.render(container, data.results, 'tv');
+                this.catalogCarousel.render(container, data.results.slice(0, 20), 'tv');
                 this.showSection('trending-series');
             }
         } catch (error) {
@@ -93,7 +93,7 @@ class HomeTab {
             const container = document.getElementById('popular-series-grid');
             
             if (container) {
-                this.catalogGrid.render(container, data.results, 'tv');
+                this.catalogCarousel.render(container, data.results.slice(0, 20), 'tv');
                 this.showSection('popular-series');
             }
         } catch (error) {

@@ -7,7 +7,8 @@ class SettingsTab {
 
     loadSettings() {
         return {
-            tmdbApiKey: localStorage.getItem('tmdb_api_key') || '90acb3adf6e0af93b6c0055ed8a721aa',
+            tmdbApiKey: localStorage.getItem('user_tmdb_api_key') || '',
+            useDefaultTmdb: localStorage.getItem('use_default_tmdb') !== 'false',
             catalogSettings: JSON.parse(localStorage.getItem('catalog_settings') || JSON.stringify({
                 movies: true,
                 series: true,
@@ -33,11 +34,20 @@ class SettingsTab {
     }
 
     setupEventListeners() {
-        // TMDB API Key
+        // TMDB API Key Save Button
+        const saveTmdbBtn = document.getElementById('save-tmdb-key');
         const tmdbInput = document.getElementById('tmdb-api-key');
-        if (tmdbInput) {
-            tmdbInput.addEventListener('change', (e) => {
-                this.updateTMDBApiKey(e.target.value);
+        if (saveTmdbBtn && tmdbInput) {
+            saveTmdbBtn.addEventListener('click', () => {
+                this.saveTMDBApiKey(tmdbInput.value);
+            });
+        }
+        
+        // Default TMDB Toggle
+        const defaultTmdbToggle = document.getElementById('toggle-default-tmdb');
+        if (defaultTmdbToggle) {
+            defaultTmdbToggle.addEventListener('change', (e) => {
+                this.updateDefaultTmdbSetting(e.target.checked);
             });
         }
 
@@ -270,6 +280,12 @@ class SettingsTab {
         if (tmdbInput) {
             tmdbInput.value = this.settings.tmdbApiKey !== '90acb3adf6e0af93b6c0055ed8a721aa' ? this.settings.tmdbApiKey : '';
         }
+        
+        // Default TMDB Toggle
+        const defaultTmdbToggle = document.getElementById('toggle-default-tmdb');
+        if (defaultTmdbToggle) {
+            defaultTmdbToggle.checked = this.settings.useDefaultTmdb;
+        }
 
         // Catalog toggles
         Object.entries(this.settings.catalogSettings).forEach(([key, value]) => {
@@ -495,12 +511,42 @@ class SettingsTab {
         return types || 'Unknown';
     }
 
-    updateTMDBApiKey(apiKey) {
-        const newKey = apiKey.trim() || '90acb3adf6e0af93b6c0055ed8a721aa';
-        this.settings.tmdbApiKey = newKey;
-        localStorage.setItem('tmdb_api_key', newKey);
-        this.app.tmdbApiKey = newKey;
-        this.app.showNotification('TMDB API key updated');
+    saveTMDBApiKey(apiKey) {
+        this.settings.tmdbApiKey = apiKey;
+        localStorage.setItem('user_tmdb_api_key', apiKey);
+        
+        // Update app's effective API key
+        this.updateEffectiveTmdbKey();
+        
+        this.app.showNotification('TMDB API key saved successfully', 'success');
+    }
+    
+    updateDefaultTmdbSetting(useDefault) {
+        this.settings.useDefaultTmdb = useDefault;
+        localStorage.setItem('use_default_tmdb', useDefault.toString());
+        
+        // Update app's effective API key
+        this.updateEffectiveTmdbKey();
+        
+        const message = useDefault ? 'Default TMDB API enabled' : 'Default TMDB API disabled';
+        this.app.showNotification(message, 'success');
+    }
+    
+    updateEffectiveTmdbKey() {
+        const defaultKey = '90acb3adf6e0af93b6c0055ed8a721aa';
+        let effectiveKey;
+        
+        if (this.settings.useDefaultTmdb) {
+            // Use user key if available, otherwise default
+            effectiveKey = this.settings.tmdbApiKey || defaultKey;
+        } else {
+            // Use only user key
+            effectiveKey = this.settings.tmdbApiKey;
+        }
+        
+        // Update app's API key
+        this.app.tmdbApiKey = effectiveKey;
+        localStorage.setItem('tmdb_api_key', effectiveKey);
     }
 
     updateCatalogSetting(key, value) {
