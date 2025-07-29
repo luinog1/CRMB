@@ -1,0 +1,345 @@
+run<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUMBLE - Media Streaming</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-text">CRUMBLE</span>
+                </div>
+            </div>
+            
+            <div class="nav-items">
+                <button class="nav-item active" data-tab="home">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    <span class="nav-label">Home</span>
+                </button>
+                
+                <button class="nav-item" data-tab="search">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span class="nav-label">Search</span>
+                </button>
+                
+                <button class="nav-item" data-tab="library">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    <span class="nav-label">Library</span>
+                </button>
+                
+                <button class="nav-item" data-tab="settings">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                    </svg>
+                    <span class="nav-label">Settings</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Home Tab -->
+            <div id="home-tab" class="tab-content active">
+                <div class="hero-banner" id="hero-banner">
+                    <!-- Hero content will be dynamically loaded -->
+                </div>
+                
+                <div class="content-sections">
+                    <section class="catalog-section" id="trending-movies">
+                        <h2 class="section-title">Trending Movies</h2>
+                        <div class="catalog-grid" id="trending-movies-grid">
+                            <!-- Content will be dynamically loaded -->
+                        </div>
+                    </section>
+                    
+                    <section class="catalog-section" id="popular-movies">
+                        <h2 class="section-title">Popular Movies</h2>
+                        <div class="catalog-grid" id="popular-movies-grid">
+                            <!-- Content will be dynamically loaded -->
+                        </div>
+                    </section>
+                    
+                    <section class="catalog-section" id="trending-series">
+                        <h2 class="section-title">Trending Series</h2>
+                        <div class="catalog-grid" id="trending-series-grid">
+                            <!-- Content will be dynamically loaded -->
+                        </div>
+                    </section>
+                    
+                    <section class="catalog-section" id="popular-series">
+                        <h2 class="section-title">Popular Series</h2>
+                        <div class="catalog-grid" id="popular-series-grid">
+                            <!-- Content will be dynamically loaded -->
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Search Tab -->
+            <div id="search-tab" class="tab-content">
+                <div class="search-container">
+                    <div class="search-header">
+                        <h1>Search</h1>
+                        <div class="search-input-container">
+                            <input type="text" id="search-input" placeholder="Search movies, series, and more..." autocomplete="off">
+                            <button id="search-button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="m21 21-4.35-4.35"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="search-filters">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="movies">Movies</button>
+                        <button class="filter-btn" data-filter="series">Series</button>
+                    </div>
+                    
+                    <div class="search-results" id="search-results">
+                        <div class="search-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <p>Start typing to search for content</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Library Tab -->
+            <div id="library-tab" class="tab-content">
+                <div class="library-container">
+                    <div class="library-header">
+                        <h1>My Library</h1>
+                        <div class="library-stats">
+                            <span class="stat">
+                                <span class="stat-number" id="watchlist-count">0</span>
+                                <span class="stat-label">Watchlist</span>
+                            </span>
+                            <span class="stat">
+                                <span class="stat-number" id="watching-count">0</span>
+                                <span class="stat-label">Watching</span>
+                            </span>
+                            <span class="stat">
+                                <span class="stat-number" id="completed-count">0</span>
+                                <span class="stat-label">Completed</span>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="library-sections">
+                        <section class="library-section">
+                            <h2>Continue Watching</h2>
+                            <div class="library-grid" id="continue-watching">
+                                <!-- Content will be dynamically loaded -->
+                            </div>
+                        </section>
+                        
+                        <section class="library-section">
+                            <h2>Watchlist</h2>
+                            <div class="library-grid" id="watchlist">
+                                <!-- Content will be dynamically loaded -->
+                            </div>
+                        </section>
+                        
+                        <section class="library-section">
+                            <h2>Recently Added</h2>
+                            <div class="library-grid" id="recently-added">
+                                <!-- Content will be dynamically loaded -->
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="tab-content">
+                <div class="settings-container">
+                    <div class="settings-header">
+                        <h1>Settings</h1>
+                    </div>
+                    
+                    <div class="settings-sections">
+                        <section class="settings-section">
+                            <h2>API Configuration</h2>
+                            <div class="setting-item">
+                                <label for="tmdb-api-key">TMDB API Key</label>
+                                <input type="password" id="tmdb-api-key" placeholder="Enter your TMDB API key (optional)">
+                                <p class="setting-description">Use your own TMDB API key for higher rate limits. Leave empty to use default.</p>
+                            </div>
+                        </section>
+                        
+                        <section class="settings-section">
+                            <h2>Catalog Sources</h2>
+                            <div class="catalog-toggles">
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="toggle-movies" checked>
+                                        <span class="toggle-slider"></span>
+                                        Movies
+                                    </label>
+                                </div>
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="toggle-series" checked>
+                                        <span class="toggle-slider"></span>
+                                        TV Series
+                                    </label>
+                                </div>
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="toggle-trending" checked>
+                                        <span class="toggle-slider"></span>
+                                        Trending Content
+                                    </label>
+                                </div>
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="toggle-popular" checked>
+                                        <span class="toggle-slider"></span>
+                                        Popular Content
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <section class="settings-section">
+                            <h2>Add-ons</h2>
+                            <div class="addon-management">
+                                <div class="addon-input">
+                                    <input type="url" id="addon-url" placeholder="Enter Stremio add-on URL">
+                                    <button id="add-addon-btn">Add Add-on</button>
+                                </div>
+                                <div class="addon-list" id="addon-list">
+                                    <!-- Add-ons will be dynamically loaded -->
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <section class="settings-section">
+                            <h2>External Players</h2>
+                            <div class="player-settings">
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="enable-infuse" checked>
+                                        <span class="toggle-slider"></span>
+                                        INFUSE
+                                    </label>
+                                </div>
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="enable-vlc" checked>
+                                        <span class="toggle-slider"></span>
+                                        VLC
+                                    </label>
+                                </div>
+                                <div class="toggle-item">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="enable-outplayer" checked>
+                                        <span class="toggle-slider"></span>
+                                        OUTPLAYER
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <section class="settings-section">
+                            <h2>Diagnostics & Troubleshooting</h2>
+                            <div class="diagnostic-controls">
+                                <button onclick="app.addonDiagnostics.performHealthCheck()" class="btn-primary">
+                                    🔍 Run Addon Health Check
+                                </button>
+                                <button onclick="app.addonDiagnostics.installCommonAddons()" class="btn-secondary">
+                                    📦 Install Popular Addons
+                                </button>
+                                <button onclick="app.streamScraper.enableDebug()" class="btn-secondary">
+                                    🐛 Enable Debug Mode
+                                </button>
+                                <button onclick="console.log(app.streamScraper.getStats())" class="btn-secondary">
+                                    📊 Show Stats
+                                </button>
+                            </div>
+                            <p class="setting-description">Diagnose addon connectivity issues and get recommendations for fixing streaming problems.</p>
+                        </section>
+                        
+                        <section class="settings-section">
+                            <h2>Cache & Storage</h2>
+                            <div class="cache-controls">
+                                <button id="clear-cache-btn" class="danger-btn">Clear Cache</button>
+                                <button id="reset-settings-btn" class="danger-btn">Reset All Settings</button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="stream-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="stream-modal-title">Select Stream</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="stream-list" id="stream-list">
+                    <!-- Stream options will be dynamically loaded -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="media-modal" class="modal">
+        <div class="modal-content media-modal-content">
+            <div class="modal-header">
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="media-details" id="media-details">
+                    <!-- Media details will be dynamically loaded -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="StreamScraperV3.js"></script>
+    <script src="AddonDiagnostics.js"></script>
+    <script src="app.js"></script>
+    <script src="HomeTab.js"></script>
+    <script src="SearchTab.js"></script>
+    <script src="LibraryTab.js"></script>
+    <script src="SettingsTab.js"></script>
+    <script src="CatalogGrid.js"></script>
+    <script src="HeroBanner.js"></script>
+    <script src="StreamListModal.js"></script>
+    <script src="ExternalPlayerHandler.js"></script>
+</body>
+</html>

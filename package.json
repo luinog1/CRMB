@@ -1,0 +1,48 @@
+{
+  "name": "crumble-media-streaming",
+  "version": "1.0.0",
+  "description": "A modular, web-based media streaming application with iOS-style interface",
+  "main": "frontend/index.html",
+  "scripts": {
+    "start": "cd frontend && npx http-server -p 8080 -o",
+    "dev": "cd frontend && npx http-server -p 3000 -o",
+    "serve": "cd frontend && python3 -m http.server 8080",
+    "build": "echo 'No build process required - static files ready to serve'",
+    "test": "echo 'No tests specified yet'",
+    "lint": "echo 'No linting configured yet'"
+  },
+  "keywords": [
+    "media",
+    "streaming",
+    "movies",
+    "tv-series",
+    "stremio",
+    "tmdb",
+    "ios-interface",
+    "dark-theme",
+    "modular",
+    "web-app"
+  ],
+  "author": "CRUMBLE Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/CRUMB.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/CRUMB/issues"
+  },
+  "homepage": "https://github.com/yourusername/CRUMB#readme",
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ]
+}
