@@ -4,23 +4,52 @@ class CatalogCarousel {
         this.app = app;
     }
 
-    render(container, items, mediaType) {
+    render(container, items, mediaType, sectionTitle = '') {
         if (!container || !items || items.length === 0) {
             container.innerHTML = '<div class="no-content">No content available</div>';
             return;
         }
 
+        // Store full dataset for 'see all' functionality
+        this.fullDataset = items;
+        this.currentMediaType = mediaType;
+        this.currentSectionTitle = sectionTitle;
+
+        // Limit to 25 items for carousel display (Netflix-style)
+        const displayItems = items.slice(0, 25);
+
+        // Accessibility: set ARIA roles and tabindex
+        container.setAttribute('role', 'region');
+        container.setAttribute('aria-label', 'Media carousel');
+        container.setAttribute('tabindex', '0');
+
         // Clear existing content
         container.innerHTML = '';
         
         // Create carousel items
-        items.forEach(item => {
+        displayItems.forEach(item => {
             const carouselItem = this.createCarouselItem(item, mediaType);
             container.appendChild(carouselItem);
         });
 
         // Add navigation functionality
         this.addNavigationControls(container);
+        this.addSeeAllButton(container, items.length);
+
+        // Keyboard navigation
+        container.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                this.scrollCarousel(container, 1);
+                e.preventDefault();
+            }
+            if (e.key === 'ArrowLeft') {
+                this.scrollCarousel(container, -1);
+                e.preventDefault();
+            }
+        });
+
+        // Netflix-style smooth scrolling behavior
+        this.setupNetflixScrolling(container);
     }
 
     createCarouselItem(item, mediaType) {
@@ -148,7 +177,8 @@ class CatalogCarousel {
     scrollCarousel(container, direction) {
         const itemWidth = 160; // carousel-item width
         const gap = 16; // gap between items
-        const scrollAmount = (itemWidth + gap) * 3; // Scroll 3 items at a time
+        const visibleItems = Math.floor(container.clientWidth / (itemWidth + gap));
+        const scrollAmount = (itemWidth + gap) * Math.max(1, visibleItems - 1); // Netflix-style: scroll by visible items minus 1
         const currentScroll = container.scrollLeft;
         const targetScroll = Math.max(0, Math.min(
             currentScroll + (scrollAmount * direction),
@@ -164,6 +194,157 @@ class CatalogCarousel {
             left: targetScroll,
             behavior: 'smooth'
         });
+    }
+
+    setupNetflixScrolling(container) {
+        let isScrolling = false;
+        let scrollTimeout;
+
+        // Smooth momentum scrolling
+        container.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                isScrolling = true;
+                container.style.scrollSnapType = 'none';
+            }
+
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                isScrolling = false;
+                container.style.scrollSnapType = 'x mandatory';
+            }, 150);
+        }, { passive: true });
+
+        // Mouse wheel horizontal scrolling
+        container.addEventListener('wheel', (e) => {
+            if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+            
+            e.preventDefault();
+            const scrollAmount = e.deltaY > 0 ? 200 : -200;
+            container.scrollBy({
+                left: scrollAmount,
+                behavior: 'smooth'
+            });
+        }, { passive: false });
+    }
+
+    addSeeAllButton(container, totalItems) {
+        if (totalItems <= 25) return; // Don't show if all items fit
+
+        const carouselContainer = container.parentElement;
+        const sectionHeader = carouselContainer.parentElement.querySelector('.section-title');
+        
+        if (!sectionHeader) return;
+
+        // Remove existing see all button
+        const existingSeeAll = sectionHeader.parentElement.querySelector('.see-all-btn');
+        if (existingSeeAll) existingSeeAll.remove();
+
+        // Create see all button
+        const seeAllBtn = document.createElement('button');
+        seeAllBtn.className = 'see-all-btn';
+        seeAllBtn.innerHTML = `
+            See All (${totalItems})
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+            </svg>
+        `;
+
+        // Add click handler
+        seeAllBtn.addEventListener('click', () => {
+            this.showFullCatalog();
+        });
+
+        // Insert after section title
+        sectionHeader.parentElement.insertBefore(seeAllBtn, sectionHeader.nextSibling);
+    }
+
+    showFullCatalog() {
+        // Create full catalog modal/overlay
+        const modal = document.createElement('div');
+        modal.className = 'full-catalog-modal';
+        modal.innerHTML = `
+            <div class="full-catalog-content">
+                <div class="full-catalog-header">
+                    <h2>${this.currentSectionTitle}</h2>
+                    <button class="close-catalog-btn">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="full-catalog-grid" id="full-catalog-grid">
+                    <!-- Items will be populated here -->
+                </div>
+            </div>
+        `;
+
+        // Populate grid with all items
+        const grid = modal.querySelector('#full-catalog-grid');
+        this.fullDataset.forEach(item => {
+            const gridItem = this.createGridItem(item, this.currentMediaType);
+            grid.appendChild(gridItem);
+        });
+
+        // Add close functionality
+        const closeBtn = modal.querySelector('.close-catalog-btn');
+        closeBtn.addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+
+        // Add to DOM
+        document.body.appendChild(modal);
+    }
+
+    createGridItem(item, mediaType) {
+        const gridItem = document.createElement('div');
+        gridItem.className = 'catalog-grid-item';
+        gridItem.dataset.id = item.id;
+        gridItem.dataset.type = mediaType;
+
+        const posterPath = item.poster_path 
+            ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
+            : this.getPlaceholderImage();
+
+        const title = item.title || item.name || 'Unknown Title';
+        const year = item.release_date || item.first_air_date 
+            ? new Date(item.release_date || item.first_air_date).getFullYear()
+            : '';
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
+
+        gridItem.innerHTML = `
+            <div class="media-card">
+                <div class="media-poster-container">
+                    <img class="media-poster" src="${posterPath}" alt="${title}" loading="lazy">
+                    <div class="play-button-overlay">
+                        <div class="play-button">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="media-info">
+                    <h3 class="media-title">${title}</h3>
+                    <div class="media-meta">
+                        <span class="media-year">${year}</span>
+                        <span class="media-rating">★ ${rating}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add click event listener
+        gridItem.addEventListener('click', () => {
+            this.handleItemClick(item, mediaType);
+        });
+
+        return gridItem;
     }
 
     updateNavigationButtons(container, prevButton, nextButton) {

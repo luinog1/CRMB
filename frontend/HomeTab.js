@@ -44,11 +44,17 @@ class HomeTab {
 
     async loadTrendingMovies() {
         try {
-            const data = await this.app.fetchFromTMDB('/trending/movie/day');
+            // Load multiple pages to get more content
+            const [page1, page2] = await Promise.all([
+                this.app.fetchFromTMDB('/trending/movie/day', { page: 1 }),
+                this.app.fetchFromTMDB('/trending/movie/day', { page: 2 })
+            ]);
+            
+            const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('trending-movies-grid');
             
             if (container) {
-                this.catalogCarousel.render(container, data.results.slice(0, 20), 'movie');
+                this.catalogCarousel.render(container, allResults, 'movie', 'Trending Movies');
                 this.showSection('trending-movies');
             }
         } catch (error) {
@@ -59,11 +65,17 @@ class HomeTab {
 
     async loadPopularMovies() {
         try {
-            const data = await this.app.fetchFromTMDB('/movie/popular');
+            // Load multiple pages to get more content
+            const [page1, page2] = await Promise.all([
+                this.app.fetchFromTMDB('/movie/popular', { page: 1 }),
+                this.app.fetchFromTMDB('/movie/popular', { page: 2 })
+            ]);
+            
+            const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('popular-movies-grid');
             
             if (container) {
-                this.catalogCarousel.render(container, data.results.slice(0, 20), 'movie');
+                this.catalogCarousel.render(container, allResults, 'movie', 'Popular Movies');
                 this.showSection('popular-movies');
             }
         } catch (error) {
@@ -74,11 +86,17 @@ class HomeTab {
 
     async loadTrendingSeries() {
         try {
-            const data = await this.app.fetchFromTMDB('/trending/tv/day');
+            // Load multiple pages to get more content
+            const [page1, page2] = await Promise.all([
+                this.app.fetchFromTMDB('/trending/tv/day', { page: 1 }),
+                this.app.fetchFromTMDB('/trending/tv/day', { page: 2 })
+            ]);
+            
+            const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('trending-series-grid');
             
             if (container) {
-                this.catalogCarousel.render(container, data.results.slice(0, 20), 'tv');
+                this.catalogCarousel.render(container, allResults, 'tv', 'Trending Series');
                 this.showSection('trending-series');
             }
         } catch (error) {
@@ -89,11 +107,17 @@ class HomeTab {
 
     async loadPopularSeries() {
         try {
-            const data = await this.app.fetchFromTMDB('/tv/popular');
+            // Load multiple pages to get more content
+            const [page1, page2] = await Promise.all([
+                this.app.fetchFromTMDB('/tv/popular', { page: 1 }),
+                this.app.fetchFromTMDB('/tv/popular', { page: 2 })
+            ]);
+            
+            const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('popular-series-grid');
             
             if (container) {
-                this.catalogCarousel.render(container, data.results.slice(0, 20), 'tv');
+                this.catalogCarousel.render(container, allResults, 'tv', 'Popular Series');
                 this.showSection('popular-series');
             }
         } catch (error) {
