@@ -129,12 +129,15 @@ class MediaDetailsModal {
             // Fetch streams for this media
             const mediaTitle = this.currentMedia.title || this.currentMedia.name || 'Unknown Title';
             
-            // For TV shows, default to season 1, episode 1 if not specified
+            // For TV shows, ensure season and episode are properly set
             let season = null;
             let episode = null;
             if (this.currentMediaType === 'tv') {
-                season = 1;
-                episode = 1;
+                // Get the first available season if not specified
+                season = this.currentMedia.seasons ? this.currentMedia.seasons[0]?.season_number : 1;
+                episode = 1; // Default to first episode
+                
+                if (!season) season = 1; // Fallback to season 1 if no seasons data
             }
             
             const streams = await this.app.streamScraper.queryWithImdbFallback(
