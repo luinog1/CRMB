@@ -28,7 +28,7 @@ class CrumbleApp {
     }
 
     initializeTmdbApiKey() {
-        const defaultKey = '90acb3adf6e0af93b6c0055ed8a721aa';
+        const defaultKey = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5MGFjYjNhZGY2ZTBhZjkzYjZjMDA1NWVkOGE3MjFhYSIsIm5iZiI6MTc0Njk5MDM2Ny41MzcsInN1YiI6IjY4MjBmNTFmNmU1YmI0ZTEzMDRiNDBmYyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.NSqZb64HIv1UqR4Z_cr5IEJnPysO-3nyJdN1TuktuVw';
         const userKey = localStorage.getItem('user_tmdb_api_key') || '';
         const useDefault = localStorage.getItem('use_default_tmdb') !== 'false';
         
@@ -305,7 +305,6 @@ class CrumbleApp {
 
     async fetchFromTMDB(endpoint, params = {}) {
         const url = new URL(`https://api.themoviedb.org/3${endpoint}`);
-        url.searchParams.append('api_key', this.tmdbApiKey);
         
         Object.entries(params).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
@@ -313,7 +312,18 @@ class CrumbleApp {
             }
         });
 
-        const response = await fetch(url);
+        const headers = {
+            'accept': 'application/json'
+        };
+        
+        // Check if the API key is a Bearer token (JWT) or regular API key
+        if (this.tmdbApiKey.includes('.')) {
+            headers['Authorization'] = `Bearer ${this.tmdbApiKey}`;
+        } else {
+            url.searchParams.append('api_key', this.tmdbApiKey);
+        }
+
+        const response = await fetch(url, { headers });
         if (!response.ok) {
             throw new Error(`TMDB API error: ${response.status}`);
         }
@@ -530,9 +540,14 @@ class CrumbleApp {
             // Query Stremio add-ons for streams
             const streams = await this.queryStremioAddons(mediaType, id);
             
-            if (window.streamModal) {
-                window.streamModal.show(streams, mediaType, id);
+            if (!this.streamModal) {
+                this.streamModal = new StreamModal(this);
             }
+            
+            const title = `Streams for ${mediaType === 'movie' ? 'Movie' : 'TV Show'}`;
+            this.streamModal.show(streams, title, (streamUrl) => {
+                this.playStream(mediaType, id, streamUrl);
+            });
         } catch (error) {
             console.error('Error loading streams:', error);
             this.showNotification('Error loading stream options', 'error');

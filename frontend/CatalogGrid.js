@@ -51,6 +51,21 @@ class CatalogGrid {
                         ⭐ ${this.app.formatRating(item.vote_average)}
                     </span>
                 </div>
+                <div class="media-actions">
+                    <button class="action-btn primary" onclick="this.app.showStreamOptions('${mediaType}', ${item.id})">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        Play
+                    </button>
+                    <button class="action-btn secondary" onclick="this.app.openMediaDetails('${mediaType}', ${item.id})">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        More Info
+                    </button>
+                </div>
             </div>
         `;
 
