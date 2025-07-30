@@ -74,40 +74,43 @@ class HeroBanner {
 
         container.innerHTML = `
             <img src="${backdropUrl}" alt="${title}" class="hero-backdrop" loading="eager">
+            <div class="hero-gradient"></div>
             <div class="hero-content">
-                <h1 class="hero-title">${title}</h1>
-                <p class="hero-overview">${this.truncateText(media.overview, 200)}</p>
-                <div class="hero-meta">
-                    <span class="hero-rating">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                        ${this.app.formatRating(media.vote_average)}
-                    </span>
-                    <span class="hero-year">${this.app.formatDate(releaseDate)}</span>
-                    ${additionalInfo ? `<span class="hero-runtime">${additionalInfo}</span>` : ''}
-                    <span class="hero-type">${media.media_type === 'movie' ? 'Movie' : 'TV Series'}</span>
+                <div class="hero-info">
+                    <h1 class="hero-title">${title}</h1>
+                    <div class="hero-meta">
+                        <span class="hero-type">${media.media_type === 'movie' ? 'Movie' : 'TV Series'}</span>
+                        <span class="hero-year">${this.app.formatDate(releaseDate)}</span>
+                        ${additionalInfo ? `<span class="hero-runtime">${additionalInfo}</span>` : ''}
+                        <span class="hero-rating">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                            </svg>
+                            ${this.app.formatRating(media.vote_average)}
+                        </span>
+                    </div>
+                    <p class="hero-overview">${this.truncateText(media.overview, 180)}</p>
                 </div>
                 <div class="hero-actions">
-                    <button class="btn-primary" onclick="app.showStreamOptions('${media.media_type}', ${media.id})">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="5,3 19,12 5,21"/>
+                    <button class="hero-btn hero-btn-primary" onclick="app.showStreamOptions('${media.media_type}', ${media.id})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
                         </svg>
-                        Watch Now
+                        <span>Watch Now</span>
                     </button>
-                    <button class="btn-secondary" onclick="app.openMediaDetails('${media.media_type}', ${media.id})">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="hero-btn hero-btn-secondary" onclick="app.openMediaDetails('${media.media_type}', ${media.id})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
                             <path d="M12 16v-4"/>
                             <path d="M12 8h.01"/>
                         </svg>
-                        More Info
+                        <span>More Info</span>
                     </button>
-                    <button class="btn-secondary" onclick="app.addToWatchlist('${media.media_type}', ${media.id})">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="hero-btn hero-btn-tertiary" onclick="app.addToWatchlist('${media.media_type}', ${media.id})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/>
                         </svg>
-                        Watchlist
+                        <span>Watchlist</span>
                     </button>
                 </div>
                 ${this.featuredItems && this.featuredItems.length > 1 ? this.createHeroIndicators() : ''}

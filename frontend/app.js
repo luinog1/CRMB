@@ -445,20 +445,12 @@ class CrumbleApp {
     }
 
     async openMediaDetails(mediaType, id) {
-        try {
-            this.showLoading();
-            
-            const endpoint = mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`;
-            const media = await this.fetchFromTMDB(endpoint, {
-                append_to_response: 'credits,external_ids'
-            });
-
-            this.renderMediaModal(media, mediaType);
-        } catch (error) {
-            console.error('Error loading media details:', error);
-            this.showNotification('Error loading media details', 'error');
-        } finally {
-            this.hideLoading();
+        if (window.mediaDetailsModal) {
+            const media = { id, media_type: mediaType };
+            window.mediaDetailsModal.show(media, mediaType);
+        } else {
+            console.error('MediaDetailsModal not available');
+            this.showNotification('Media details not available', 'error');
         }
     }
 
@@ -541,7 +533,7 @@ class CrumbleApp {
             const streams = await this.queryStremioAddons(mediaType, id);
             
             if (!this.streamModal) {
-                this.streamModal = new StreamModal(this);
+                this.streamModal = new StreamListModal(this);
             }
             
             const title = `Streams for ${mediaType === 'movie' ? 'Movie' : 'TV Show'}`;

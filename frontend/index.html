@@ -236,10 +236,35 @@
                         
                         <section class="settings-section">
                             <h2>Add-ons</h2>
+                            <p class="section-description">Manage your Stremio add-ons to access different streaming sources and content libraries.</p>
                             <div class="addon-management">
-                                <div class="addon-input">
-                                    <input type="url" id="addon-url" placeholder="Enter Stremio add-on URL">
-                                    <button id="add-addon-btn">Add Add-on</button>
+                                <div class="addon-input-container">
+                                    <div class="addon-input-group">
+                                        <div class="input-wrapper">
+                                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                            </svg>
+                                            <input type="url" id="addon-url" placeholder="https://example.com/manifest.json" class="addon-url-input">
+                                        </div>
+                                        <button id="add-addon-btn" class="addon-add-btn">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                                <line x1="5" y1="12" x2="19" y2="12"/>
+                                            </svg>
+                                            Add Add-on
+                                        </button>
+                                    </div>
+                                    <div class="addon-help">
+                                        <div class="help-item">
+                                            <span class="help-icon">💡</span>
+                                            <span>Add-ons provide access to different streaming sources and content libraries</span>
+                                        </div>
+                                        <div class="help-item">
+                                            <span class="help-icon">🔗</span>
+                                            <span>Enter the full manifest URL (usually ends with /manifest.json)</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="addon-list" id="addon-list">
                                     <!-- Add-ons will be dynamically loaded -->

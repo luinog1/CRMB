@@ -12,8 +12,11 @@ class CatalogCarousel {
         // Clear existing content
         container.innerHTML = '';
         
-        // Create section header with title and 'See All' button
-        if (title) {
+        // Only add section header if container doesn't have a parent with existing title
+        const parentSection = container.closest('.carousel-section');
+        const hasExistingTitle = parentSection && parentSection.querySelector('.carousel-title, h2');
+        
+        if (title && !hasExistingTitle) {
             const header = this.createSectionHeader(title, mediaType);
             container.appendChild(header);
         }
@@ -217,12 +220,8 @@ class CatalogCarousel {
     }
 
     handleItemClick(item, mediaType) {
-        // Open media details modal
-        if (this.app.mediaDetailsModal) {
-            this.app.mediaDetailsModal.show(item, mediaType);
-        } else {
-            console.warn('MediaDetailsModal not available');
-        }
+        // Open media details modal using the app's method
+        this.app.openMediaDetails(mediaType, item.id);
     }
 
     // Utility method to create a simple grid layout (fallback)

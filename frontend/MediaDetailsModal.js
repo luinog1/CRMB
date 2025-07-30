@@ -127,7 +127,23 @@ class MediaDetailsModal {
             this.app.showLoading();
             
             // Fetch streams for this media
-            const streams = await this.app.streamScraper.getStreams(this.currentMedia.id, this.currentMediaType);
+            const mediaTitle = this.currentMedia.title || this.currentMedia.name || 'Unknown Title';
+            
+            // For TV shows, default to season 1, episode 1 if not specified
+            let season = null;
+            let episode = null;
+            if (this.currentMediaType === 'tv') {
+                season = 1;
+                episode = 1;
+            }
+            
+            const streams = await this.app.streamScraper.queryWithImdbFallback(
+                this.currentMediaType, 
+                this.currentMedia.id, 
+                season, 
+                episode, 
+                mediaTitle
+            );
             
             // Close details modal and show stream modal
             document.getElementById('media-details-modal').remove();
