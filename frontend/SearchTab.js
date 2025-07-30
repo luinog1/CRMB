@@ -1,58 +1,74 @@
-// Search Tab Controller
 class SearchTab {
-    constructor(app) {
-        this.app = app;
-        this.catalogGrid = new CatalogGrid(app);
-        this.searchTimeout = null;
+    constructor() {
+        this.searchInput = null;
+        this.searchButton = null;
+        this.searchResults = null;
+        this.filterButtons = [];
         this.currentFilter = 'all';
+        this.searchTimeout = null;
         this.currentQuery = '';
-        this.searchHistory = JSON.parse(localStorage.getItem('search_history') || '[]');
-        this.maxHistoryItems = 10;
+        this.isLoading = false;
+        this.searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        
+        this.init();
     }
 
     init() {
+        this.searchInput = document.getElementById('search-input');
+        this.searchButton = document.getElementById('search-button');
+        this.searchResults = document.querySelector('.search-results');
+        this.filterButtons = document.querySelectorAll('.filter-btn');
+        
         this.setupEventListeners();
-        this.loadSearchHistory();
+        this.setupKeyboardShortcuts();
+        this.displayPlaceholder();
     }
 
     setupEventListeners() {
-        const searchInput = document.getElementById('search-input');
-        const searchButton = document.getElementById('search-button');
-        const filterButtons = document.querySelectorAll('.filter-btn');
+        // Search input with debouncing
+        this.searchInput.addEventListener('input', (e) => {
+            this.handleSearchInput(e.target.value);
+        });
 
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.handleSearchInput(e.target.value);
-            });
+        // Search button click
+        this.searchButton.addEventListener('click', () => {
+            this.performSearch(this.searchInput.value);
+        });
 
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.performSearch(e.target.value);
+        // Enter key search
+        this.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.performSearch(this.searchInput.value);
+            }
+        });
+
+        // Filter buttons
+        this.filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.setActiveFilter(btn.dataset.filter);
+                if (this.currentQuery) {
+                    this.performSearch(this.currentQuery);
                 }
             });
+        });
 
-            // Focus search input when tab is activated
-            searchInput.addEventListener('focus', () => {
-                this.showSearchSuggestions();
-            });
+        // Focus management
+        this.searchInput.addEventListener('focus', () => {
+            this.searchInput.parentElement.classList.add('focused');
+        });
 
-            searchInput.addEventListener('blur', () => {
-                // Delay hiding suggestions to allow for clicks
-                setTimeout(() => this.hideSearchSuggestions(), 200);
-            });
-        }
+        this.searchInput.addEventListener('blur', () => {
+            this.searchInput.parentElement.classList.remove('focused');
+        });
+    }
 
-        if (searchButton) {
-            searchButton.addEventListener('click', () => {
-                const query = searchInput?.value || '';
-                this.performSearch(query);
-            });
-        }
-
-        filterButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.setFilter(e.target.dataset.filter);
-            });
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+K or Cmd+K to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                this.searchInput.focus();
+            }
         });
     }
 
@@ -67,551 +83,268 @@ class SearchTab {
             if (query.trim().length >= 2) {
                 this.performSearch(query);
             } else if (query.trim().length === 0) {
-                this.clearResults();
-                this.showSearchHistory();
+                this.displayPlaceholder();
             }
         }, 300);
     }
 
     async performSearch(query) {
-        if (!query || query.trim().length < 2) {
-            this.clearResults();
-            return;
-        }
+        if (!query.trim() || this.isLoading) return;
 
         this.currentQuery = query.trim();
-        this.app.showLoading();
+        this.isLoading = true;
+        this.displayLoading();
 
         try {
-            const results = await this.searchContent(this.currentQuery, this.currentFilter);
-            this.displayResults(results);
-            this.addToSearchHistory(this.currentQuery);
+            const results = await this.fetchSearchResults(query);
+            this.displayResults(results, query);
+            this.addToSearchHistory(query);
         } catch (error) {
             console.error('Search error:', error);
-            this.app.showNotification('Search failed. Please try again.', 'error');
-            this.showErrorState();
+            this.displayError('Failed to search. Please try again.');
         } finally {
-            this.app.hideLoading();
+            this.isLoading = false;
         }
     }
 
-    async searchContent(query, filter = 'all') {
-        const results = {
-            movies: [],
-            series: [],
-            combined: []
-        };
-
-        const searchPromises = [];
-
-        // Search movies
-        if (filter === 'all' || filter === 'movies') {
-            searchPromises.push(
-                this.app.fetchFromTMDB('/search/movie', { query })
-                    .then(data => {
-                        results.movies = data.results || [];
-                        results.combined.push(...results.movies.map(item => ({ ...item, media_type: 'movie' })));
-                    })
-                    .catch(error => console.warn('Movie search failed:', error))
-            );
-        }
-
-        // Search TV series
-        if (filter === 'all' || filter === 'series') {
-            searchPromises.push(
-                this.app.fetchFromTMDB('/search/tv', { query })
-                    .then(data => {
-                        results.series = data.results || [];
-                        results.combined.push(...results.series.map(item => ({ ...item, media_type: 'tv' })));
-                    })
-                    .catch(error => console.warn('TV search failed:', error))
-            );
-        }
-
-        // Search people (actors, directors, etc.)
-        if (filter === 'all') {
-            searchPromises.push(
-                this.app.fetchFromTMDB('/search/person', { query })
-                    .then(data => {
-                        results.people = data.results || [];
-                    })
-                    .catch(error => console.warn('People search failed:', error))
-            );
-        }
-
-        await Promise.all(searchPromises);
-
-        // Sort combined results by popularity
-        results.combined.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-
-        return results;
-    }
-
-    displayResults(results) {
-        const resultsContainer = document.getElementById('search-results');
-        if (!resultsContainer) return;
-
-        resultsContainer.innerHTML = '';
-
-        let itemsToShow = [];
-        let mediaType = null;
-
+    async fetchSearchResults(query) {
+        const apiKey = '4f5f43495afcc67e9553f6c684a82f84';
+        const baseUrl = 'https://api.themoviedb.org/3';
+        
+        let endpoint;
         switch (this.currentFilter) {
             case 'movies':
-                itemsToShow = results.movies;
-                mediaType = 'movie';
+                endpoint = `/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}`;
                 break;
             case 'series':
-                itemsToShow = results.series;
-                mediaType = 'tv';
+                endpoint = `/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}`;
                 break;
-            case 'all':
+            case 'people':
+                endpoint = `/search/person?api_key=${apiKey}&query=${encodeURIComponent(query)}`;
+                break;
             default:
-                itemsToShow = results.combined;
-                break;
+                endpoint = `/search/multi?api_key=${apiKey}&query=${encodeURIComponent(query)}`;
         }
 
-        if (itemsToShow.length === 0) {
-            this.showNoResults();
+        const response = await fetch(`${baseUrl}${endpoint}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.results || [];
+    }
+
+    displayResults(results, query) {
+        if (!results || results.length === 0) {
+            this.displayNoResults(query);
             return;
         }
 
-        // Create results grid
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'catalog-grid search-results-grid';
-
-        if (this.currentFilter === 'all') {
-            // For 'all' filter, render mixed content
-            this.renderMixedResults(gridContainer, itemsToShow);
-        } else {
-            // For specific filters, use catalog grid
-            this.catalogGrid.render(gridContainer, itemsToShow, mediaType);
-        }
-
-        resultsContainer.appendChild(gridContainer);
-
-        // Add results summary
-        this.addResultsSummary(resultsContainer, results);
-    }
-
-    renderMixedResults(container, items) {
-        container.innerHTML = '';
-        
-        items.forEach(item => {
-            const mediaType = item.media_type;
-            const card = this.catalogGrid.createMediaCard(item, mediaType);
-            container.appendChild(card);
-        });
-    }
-
-    addResultsSummary(container, results) {
-        const summary = document.createElement('div');
-        summary.className = 'search-summary';
-        
-        const totalResults = results.combined.length;
-        const movieCount = results.movies?.length || 0;
-        const seriesCount = results.series?.length || 0;
-
-        summary.innerHTML = `
-            <p class="search-summary-text">
-                Found ${totalResults} result${totalResults !== 1 ? 's' : ''} for "${this.currentQuery}"
-                ${this.currentFilter === 'all' ? `(${movieCount} movies, ${seriesCount} series)` : ''}
-            </p>
-        `;
-
-        container.insertBefore(summary, container.firstChild);
-        this.addSearchSummaryCSS();
-    }
-
-    addSearchSummaryCSS() {
-        if (document.getElementById('search-summary-styles')) return;
-
-        const style = document.createElement('style');
-        style.id = 'search-summary-styles';
-        style.textContent = `
-            .search-summary {
-                margin-bottom: 24px;
-                padding: 16px 0;
-                border-bottom: 1px solid var(--border-color);
-            }
-
-            .search-summary-text {
-                color: var(--text-secondary);
-                font-size: 16px;
-                margin: 0;
-            }
-
-            .search-results-grid {
-                margin-top: 24px;
-            }
-        `;
-
-        document.head.appendChild(style);
-    }
-
-    setFilter(filter) {
-        this.currentFilter = filter;
-        
-        // Update filter buttons
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-filter="${filter}"]`)?.classList.add('active');
-
-        // Re-search with new filter if there's a current query
-        if (this.currentQuery) {
-            this.performSearch(this.currentQuery);
-        }
-    }
-
-    clearResults() {
-        const resultsContainer = document.getElementById('search-results');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = `
-                <div class="search-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="m21 21-4.35-4.35"/>
-                    </svg>
-                    <p>Start typing to search for content</p>
+        const resultsHtml = `
+            <div class="search-results-header">
+                <div class="search-summary">
+                    <h3>Search Results</h3>
+                    <p>Found ${results.length} results for "${query}"</p>
                 </div>
-            `;
-        }
-    }
-
-    showNoResults() {
-        const resultsContainer = document.getElementById('search-results');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = `
-                <div class="no-results">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="m21 21-4.35-4.35"/>
-                    </svg>
-                    <h3>No results found</h3>
-                    <p>Try adjusting your search terms or filters</p>
-                    <div class="search-suggestions">
-                        <h4>Suggestions:</h4>
-                        <ul>
-                            <li>Check your spelling</li>
-                            <li>Try different keywords</li>
-                            <li>Use broader search terms</li>
-                            <li>Try searching in all categories</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-
-        this.addNoResultsCSS();
-    }
-
-    addNoResultsCSS() {
-        if (document.getElementById('no-results-styles')) return;
-
-        const style = document.createElement('style');
-        style.id = 'no-results-styles';
-        style.textContent = `
-            .no-results {
-                text-align: center;
-                padding: 60px 20px;
-                color: var(--text-muted);
-            }
-
-            .no-results svg {
-                width: 64px;
-                height: 64px;
-                margin-bottom: 24px;
-                opacity: 0.5;
-            }
-
-            .no-results h3 {
-                font-size: 24px;
-                color: var(--text-primary);
-                margin-bottom: 12px;
-            }
-
-            .no-results p {
-                font-size: 16px;
-                margin-bottom: 32px;
-            }
-
-            .search-suggestions {
-                max-width: 400px;
-                margin: 0 auto;
-                text-align: left;
-                background: var(--secondary-bg);
-                padding: 24px;
-                border-radius: var(--border-radius);
-                border: 1px solid var(--border-color);
-            }
-
-            .search-suggestions h4 {
-                color: var(--text-primary);
-                margin-bottom: 16px;
-                font-size: 18px;
-            }
-
-            .search-suggestions ul {
-                list-style: none;
-                padding: 0;
-            }
-
-            .search-suggestions li {
-                padding: 8px 0;
-                border-bottom: 1px solid var(--border-color);
-                font-size: 14px;
-            }
-
-            .search-suggestions li:last-child {
-                border-bottom: none;
-            }
-
-            .search-suggestions li::before {
-                content: "•";
-                color: var(--accent-green);
-                margin-right: 12px;
-            }
-        `;
-
-        document.head.appendChild(style);
-    }
-
-    showErrorState() {
-        const resultsContainer = document.getElementById('search-results');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = `
-                <div class="search-error">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    <h3>Search Error</h3>
-                    <p>Unable to perform search. Please check your connection and try again.</p>
-                    <button class="btn-primary" onclick="searchTab.performSearch('${this.currentQuery}')">
-                        Retry Search
-                    </button>
-                </div>
-            `;
-        }
-
-        this.addErrorStateCSS();
-    }
-
-    addErrorStateCSS() {
-        if (document.getElementById('search-error-styles')) return;
-
-        const style = document.createElement('style');
-        style.id = 'search-error-styles';
-        style.textContent = `
-            .search-error {
-                text-align: center;
-                padding: 60px 20px;
-                color: var(--text-muted);
-            }
-
-            .search-error svg {
-                width: 64px;
-                height: 64px;
-                margin-bottom: 24px;
-                color: #ff4444;
-            }
-
-            .search-error h3 {
-                font-size: 24px;
-                color: var(--text-primary);
-                margin-bottom: 12px;
-            }
-
-            .search-error p {
-                font-size: 16px;
-                margin-bottom: 32px;
-            }
-        `;
-
-        document.head.appendChild(style);
-    }
-
-    addToSearchHistory(query) {
-        if (!query || this.searchHistory.includes(query)) return;
-
-        this.searchHistory.unshift(query);
-        
-        // Limit history size
-        if (this.searchHistory.length > this.maxHistoryItems) {
-            this.searchHistory = this.searchHistory.slice(0, this.maxHistoryItems);
-        }
-
-        localStorage.setItem('search_history', JSON.stringify(this.searchHistory));
-    }
-
-    loadSearchHistory() {
-        this.searchHistory = JSON.parse(localStorage.getItem('search_history') || '[]');
-    }
-
-    showSearchHistory() {
-        if (this.searchHistory.length === 0) return;
-
-        const resultsContainer = document.getElementById('search-results');
-        if (!resultsContainer) return;
-
-        resultsContainer.innerHTML = `
-            <div class="search-history">
-                <h3>Recent Searches</h3>
-                <div class="history-items">
-                    ${this.searchHistory.map(query => `
-                        <button class="history-item" onclick="searchTab.performSearchFromHistory('${query}')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                <path d="M3 3v5h5"/>
-                            </svg>
-                            ${query}
-                        </button>
-                    `).join('')}
-                </div>
-                <button class="clear-history-btn" onclick="searchTab.clearSearchHistory()">
-                    Clear History
-                </button>
+            </div>
+            <div class="search-grid carousel-grid">
+                ${results.map(item => this.createResultCard(item)).join('')}
             </div>
         `;
 
-        this.addSearchHistoryCSS();
+        this.searchResults.innerHTML = resultsHtml;
+        this.attachResultEventListeners();
     }
 
-    addSearchHistoryCSS() {
-        if (document.getElementById('search-history-styles')) return;
+    createResultCard(item) {
+        const title = item.title || item.name || 'Unknown Title';
+        const year = item.release_date || item.first_air_date;
+        const yearText = year ? new Date(year).getFullYear() : 'N/A';
+        const posterPath = item.poster_path 
+            ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+            : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik0xNTAgMjI1QzE2NS4xNTUgMjI1IDE3Ny41IDIxMi42NTUgMTc3LjUgMTk3LjVDMTc3LjUgMTgyLjM0NSAxNjUuMTU1IDE3MCAxNTAgMTcwQzEzNC44NDUgMTcwIDEyMi41IDE4Mi4zNDUgMTIyLjUgMTk3LjVDMTIyLjUgMjEyLjY1NSAxMzQuODQ1IDIyNSAxNTAgMjI1WiIgZmlsbD0iIzMzMzMzMyIvPgo8cGF0aCBkPSJNMTg3LjUgMjYyLjVIMTEyLjVDMTA2Ljk3NyAyNjIuNSAxMDIuNSAyNjYuOTc3IDEwMi41IDI3Mi41VjI4MEMxMDIuNSAyODUuNTIzIDEwNi45NzcgMjkwIDExMi41IDI5MEgxODcuNUMxOTMuMDIzIDI5MCAxOTcuNSAyODUuNTIzIDE5Ny41IDI4MFYyNzIuNUMxOTcuNSAyNjYuOTc3IDE5My4wMjMgMjYyLjUgMTg3LjUgMjYyLjVaIiBmaWxsPSIjMzMzMzMzIi8+Cjwvc3ZnPgo=';
+        
+        const mediaType = item.media_type || (item.title ? 'movie' : 'tv');
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
 
-        const style = document.createElement('style');
-        style.id = 'search-history-styles';
-        style.textContent = `
-            .search-history {
-                padding: 24px 0;
-            }
+        return `
+            <div class="poster-card" data-id="${item.id}" data-type="${mediaType}">
+                <div class="poster-image">
+                    <img src="${posterPath}" alt="${title}" loading="lazy">
+                    <div class="poster-overlay">
+                        <div class="poster-actions">
+                            <button class="poster-button play-btn" title="Play">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </button>
+                            <button class="poster-button info-btn" title="More Info">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="poster-info">
+                    <h3 class="poster-title">${title}</h3>
+                    <div class="poster-metadata">
+                        <span class="year">${yearText}</span>
+                        <span class="rating">⭐ ${rating}</span>
+                        <span class="type">${mediaType.toUpperCase()}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
-            .search-history h3 {
-                font-size: 20px;
-                color: var(--text-primary);
-                margin-bottom: 20px;
+    attachResultEventListeners() {
+        const cards = this.searchResults.querySelectorAll('.poster-card');
+        cards.forEach(card => {
+            const playBtn = card.querySelector('.play-btn');
+            const infoBtn = card.querySelector('.info-btn');
+            
+            if (playBtn) {
+                playBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.handlePlay(card.dataset.id, card.dataset.type);
+                });
             }
+            
+            if (infoBtn) {
+                infoBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.handleInfo(card.dataset.id, card.dataset.type);
+                });
+            }
+        });
+    }
 
-            .history-items {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                margin-bottom: 24px;
-            }
+    handlePlay(id, type) {
+        console.log(`Playing ${type} with ID: ${id}`);
+        // Integrate with existing player functionality
+        if (window.streamScraper) {
+            window.streamScraper.searchStreams(id, type);
+        }
+    }
 
-            .history-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px 16px;
-                background: var(--secondary-bg);
-                border: 1px solid var(--border-color);
-                border-radius: var(--border-radius-small);
-                color: var(--text-secondary);
-                cursor: pointer;
-                transition: var(--transition);
-                text-align: left;
-                font-size: 16px;
-            }
+    handleInfo(id, type) {
+        console.log(`Showing info for ${type} with ID: ${id}`);
+        // Integrate with existing modal functionality
+        if (window.mediaDetailsModal) {
+            window.mediaDetailsModal.show(id, type);
+        }
+    }
 
-            .history-item:hover {
-                background: var(--hover-bg);
-                color: var(--text-primary);
-                border-color: var(--accent-green);
-            }
-
-            .history-item svg {
-                width: 16px;
-                height: 16px;
-                opacity: 0.7;
-            }
-
-            .clear-history-btn {
-                padding: 12px 24px;
-                background: transparent;
-                border: 1px solid var(--border-color);
-                border-radius: var(--border-radius-small);
-                color: var(--text-muted);
-                cursor: pointer;
-                transition: var(--transition);
-                font-size: 14px;
-            }
-
-            .clear-history-btn:hover {
-                background: #ff4444;
-                color: white;
-                border-color: #ff4444;
-            }
+    displayPlaceholder() {
+        this.searchResults.innerHTML = `
+            <div class="search-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <p>Search for movies, TV shows, and more...</p>
+                <div class="search-suggestions">
+                    <p>Try searching for:</p>
+                    <div class="suggestion-tags">
+                        <span class="suggestion-tag">Marvel</span>
+                        <span class="suggestion-tag">Breaking Bad</span>
+                        <span class="suggestion-tag">The Office</span>
+                        <span class="suggestion-tag">Inception</span>
+                    </div>
+                </div>
+            </div>
         `;
 
-        document.head.appendChild(style);
+        // Add click handlers for suggestions
+        const suggestionTags = this.searchResults.querySelectorAll('.suggestion-tag');
+        suggestionTags.forEach(tag => {
+            tag.addEventListener('click', () => {
+                this.searchInput.value = tag.textContent;
+                this.performSearch(tag.textContent);
+            });
+        });
     }
 
-    performSearchFromHistory(query) {
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-            searchInput.value = query;
+    displayLoading() {
+        this.searchResults.innerHTML = `
+            <div class="search-loading">
+                <div class="loading-spinner"></div>
+                <p>Searching...</p>
+            </div>
+        `;
+    }
+
+    displayNoResults(query) {
+        this.searchResults.innerHTML = `
+            <div class="search-no-results">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                    <line x1="9" y1="9" x2="13" y2="13"></line>
+                    <line x1="13" y1="9" x2="9" y2="13"></line>
+                </svg>
+                <h3>No results found</h3>
+                <p>We couldn't find anything for "${query}"</p>
+                <div class="no-results-suggestions">
+                    <p>Try:</p>
+                    <ul>
+                        <li>Checking your spelling</li>
+                        <li>Using different keywords</li>
+                        <li>Searching for a different title</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+
+    displayError(message) {
+        this.searchResults.innerHTML = `
+            <div class="search-error">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <h3>Search Error</h3>
+                <p>${message}</p>
+                <button class="retry-btn" onclick="searchTab.performSearch('${this.currentQuery}')">
+                    Try Again
+                </button>
+            </div>
+        `;
+    }
+
+    setActiveFilter(filter) {
+        this.currentFilter = filter;
+        
+        // Update button states
+        this.filterButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
+    }
+
+    addToSearchHistory(query) {
+        if (!this.searchHistory.includes(query)) {
+            this.searchHistory.unshift(query);
+            this.searchHistory = this.searchHistory.slice(0, 10); // Keep only last 10
+            localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory));
         }
-        this.performSearch(query);
     }
 
-    clearSearchHistory() {
-        this.searchHistory = [];
-        localStorage.removeItem('search_history');
-        this.clearResults();
-        this.app.showNotification('Search history cleared');
-    }
-
-    showSearchSuggestions() {
-        // This could be expanded to show trending searches or suggestions
-        if (this.currentQuery === '' && this.searchHistory.length > 0) {
-            this.showSearchHistory();
-        }
-    }
-
-    hideSearchSuggestions() {
-        // Hide suggestions when input loses focus
-    }
-
-    // Advanced search functionality
-    async performAdvancedSearch(params) {
-        try {
-            this.app.showLoading();
-            
-            const results = await this.app.fetchFromTMDB('/discover/movie', params);
-            this.displayResults({ movies: results.results, series: [], combined: results.results.map(item => ({ ...item, media_type: 'movie' })) });
-        } catch (error) {
-            console.error('Advanced search error:', error);
-            this.showErrorState();
-        } finally {
-            this.app.hideLoading();
-        }
-    }
-
-    // Method to search by genre
-    async searchByGenre(genreId, mediaType = 'movie') {
-        const endpoint = mediaType === 'movie' ? '/discover/movie' : '/discover/tv';
-        const params = {
-            with_genres: genreId,
-            sort_by: 'popularity.desc'
-        };
-
-        try {
-            const data = await this.app.fetchFromTMDB(endpoint, params);
-            const results = mediaType === 'movie' 
-                ? { movies: data.results, series: [], combined: data.results.map(item => ({ ...item, media_type: 'movie' })) }
-                : { movies: [], series: data.results, combined: data.results.map(item => ({ ...item, media_type: 'tv' })) };
-            
-            this.displayResults(results);
-        } catch (error) {
-            console.error('Genre search error:', error);
-            this.showErrorState();
-        }
+    clearSearch() {
+        this.searchInput.value = '';
+        this.currentQuery = '';
+        this.displayPlaceholder();
     }
 }
 
-// Make SearchTab available globally
-window.SearchTab = SearchTab;
+// Initialize search tab when DOM is loaded
+let searchTab;
+document.addEventListener('DOMContentLoaded', () => {
+    searchTab = new SearchTab();
+});
+
+// Export for global access
+window.searchTab = searchTab;

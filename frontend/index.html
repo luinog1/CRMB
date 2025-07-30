@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRUMBLE - Media Streaming</title>
-    <link rel="stylesheet" href="styles.css?v=2">
+    <link rel="stylesheet" href="styles.css?v=9">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -99,13 +99,16 @@
                     <div class="search-header">
                         <h1>Search</h1>
                         <div class="search-input-container">
-                            <input type="text" id="search-input" placeholder="Search movies, series, and more..." autocomplete="off">
-                            <button id="search-button">
+                            <input type="text" id="search-input" placeholder="Search movies, series, and more..." autocomplete="off" aria-label="Search content" aria-describedby="search-hint">
+                            <button id="search-button" aria-label="Search">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="11" cy="11" r="8"/>
                                     <path d="m21 21-4.35-4.35"/>
                                 </svg>
                             </button>
+                        </div>
+                        <div class="search-hint" id="search-hint">
+                            Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (or <kbd>Cmd</kbd>+<kbd>K</kbd>) to focus search
                         </div>
                     </div>
                     
@@ -113,6 +116,7 @@
                         <button class="filter-btn active" data-filter="all">All</button>
                         <button class="filter-btn" data-filter="movies">Movies</button>
                         <button class="filter-btn" data-filter="series">Series</button>
+                        <button class="filter-btn" data-filter="people">People</button>
                     </div>
                     
                     <div class="search-results" id="search-results">
