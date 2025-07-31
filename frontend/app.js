@@ -24,6 +24,9 @@ class CrumbleApp {
         // Initialize addon diagnostics
         this.addonDiagnostics = new AddonDiagnostics(this);
         
+        // Initialize MDBList integration
+        this.mdblistIntegration = new MDBListIntegration(this);
+        
         this.init();
     }
 
@@ -42,11 +45,16 @@ class CrumbleApp {
         localStorage.setItem('tmdb_api_key', this.tmdbApiKey);
     }
 
-    init() {
+    async init() {
         this.setupEventListeners();
-        this.loadInitialContent();
         this.setupModals();
         this.loadSettings();
+        
+        // Wait for initial content to load before initializing MDBList integration
+        await this.loadInitialContent();
+        setTimeout(() => {
+            this.mdblistIntegration.init();
+        }, 500);
     }
 
     setupEventListeners() {
