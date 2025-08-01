@@ -520,12 +520,12 @@ class TMDBIntegration {
     }
 
     async getMovieDetails(movieId) {
-        const endpoint = `/movie/${movieId}?append_to_response=credits,videos,images`;
+        const endpoint = `/movie/${movieId}?append_to_response=credits,videos,images,external_ids,keywords,recommendations,similar,watch/providers`;
         return await this.makeApiCall(endpoint);
     }
 
     async getTVDetails(tvId) {
-        const endpoint = `/tv/${tvId}?append_to_response=credits,videos,images`;
+        const endpoint = `/tv/${tvId}?append_to_response=credits,videos,images,external_ids,keywords,recommendations,similar,watch/providers,content_ratings`;
         return await this.makeApiCall(endpoint);
     }
 

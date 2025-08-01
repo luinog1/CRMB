@@ -51,15 +51,16 @@ class CatalogManager {
                 description: catalog.description,
                 type: 'mdblist',
                 source: 'MDBList',
-                items: catalog.items || [],
+                items: catalog.catalogs?.[0]?.metas || catalog.items || [],
                 metadata: {
-                    itemCount: catalog.source?.itemCount || 0,
-                    mediaType: catalog.source?.mediaType || 'mixed',
-                    createdAt: catalog.source?.createdAt || Date.now(),
-                    lastUpdated: catalog.source?.lastUpdated || Date.now()
+                    itemCount: catalog.catalogs?.[0]?.metas?.length || catalog.items?.length || 0,
+                    mediaType: catalog.types?.[0] || 'mixed',
+                    createdAt: Date.now(),
+                    lastUpdated: Date.now()
                 },
                 enabled: true,
-                logo: catalog.logo || 'https://mdblist.com/favicon.ico'
+                logo: catalog.logo || 'https://mdblist.com/favicon.ico',
+                manifest: catalog
             });
         }
     }
@@ -264,6 +265,40 @@ class CatalogManager {
 
     saveCatalogSettings() {
         localStorage.setItem('catalog_management_settings', JSON.stringify(this.catalogSettings));
+    }
+
+    addMDBListCatalog(catalog) {
+        this.catalogs.set(catalog.id, {
+            id: catalog.id,
+            name: catalog.name,
+            description: catalog.description,
+            type: 'mdblist',
+            source: 'MDBList',
+            items: catalog.catalogs?.[0]?.metas || [],
+            metadata: {
+                itemCount: catalog.catalogs?.[0]?.metas?.length || 0,
+                mediaType: catalog.types?.[0] || 'mixed',
+                createdAt: Date.now(),
+                lastUpdated: Date.now()
+            },
+            enabled: true,
+            logo: catalog.logo || 'https://mdblist.com/favicon.ico',
+            manifest: catalog
+        });
+        this.notifyUpdate();
+    }
+
+    removeMDBListCatalog(catalogId) {
+        this.catalogs.delete(catalogId);
+        this.notifyUpdate();
+    }
+
+    clearMDBListCatalogs() {
+        const mdblistCatalogIds = Array.from(this.catalogs.keys()).filter(id => 
+            this.catalogs.get(id).type === 'mdblist'
+        );
+        mdblistCatalogIds.forEach(id => this.catalogs.delete(id));
+        this.notifyUpdate();
     }
 
     notifyUpdate() {

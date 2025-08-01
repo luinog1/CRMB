@@ -29,6 +29,8 @@ class MediaDetailsModal {
 
     async fetchMediaDetails(id, mediaType) {
         let tmdbId = id;
+        let originalId = id;
+        let fallbackData = null;
         
         // Check if the ID is an IMDb ID (starts with 'tt')
         if (typeof id === 'string' && id.startsWith('tt')) {
@@ -36,21 +38,82 @@ class MediaDetailsModal {
                 tmdbId = await this.app.convertImdbToTmdbId(id, mediaType);
                 console.log(`Converted IMDb ID ${id} to TMDB ID ${tmdbId}`);
             } catch (error) {
-                console.error(`Failed to convert IMDb ID ${id} to TMDB ID:`, error);
-                throw new Error(`Unable to find TMDB data for ${id}`);
+                console.warn(`Failed to convert IMDb ID ${id} to TMDB ID:`, error);
+                // Don't throw error, try to use IMDb ID directly or provide fallback
+                tmdbId = null;
+                
+                // Try to get basic info from addon data or provide fallback
+                fallbackData = {
+                    id: originalId,
+                    title: 'Unknown Title',
+                    overview: 'Additional details not available from TMDB',
+                    poster_path: null,
+                    backdrop_path: null,
+                    vote_average: 0,
+                    release_date: '',
+                    genres: [],
+                    credits: { cast: [], crew: [] },
+                    videos: { results: [] },
+                    isFallback: true,
+                    originalId: originalId
+                };
             }
         }
         
-        const endpoint = mediaType === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`;
-        const details = await this.app.fetchFromTMDB(endpoint);
+        // Handle temporary IDs from MDBList
+        if (typeof id === 'string' && id.startsWith('temp:')) {
+            console.warn('Temporary ID detected, using fallback data:', id);
+            return {
+                id: id,
+                title: 'MDBList Item',
+                overview: 'Limited metadata available for this item',
+                poster_path: null,
+                backdrop_path: null,
+                vote_average: 0,
+                release_date: '',
+                genres: [],
+                credits: { cast: [], crew: [] },
+                videos: { results: [] },
+                isFallback: true,
+                originalId: id
+            };
+        }
         
-        // Fetch additional data
-        const [credits, videos] = await Promise.all([
-            this.app.fetchFromTMDB(`${endpoint}/credits`).catch(() => ({ cast: [], crew: [] })),
-            this.app.fetchFromTMDB(`${endpoint}/videos`).catch(() => ({ results: [] }))
-        ]);
+        if (fallbackData) {
+            return fallbackData;
+        }
         
-        return { ...details, credits, videos };
+        try {
+            const endpoint = mediaType === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`;
+            const details = await this.app.fetchFromTMDB(endpoint);
+            
+            // Fetch additional data
+            const [credits, videos] = await Promise.all([
+                this.app.fetchFromTMDB(`${endpoint}/credits`).catch(() => ({ cast: [], crew: [] })),
+                this.app.fetchFromTMDB(`${endpoint}/videos`).catch(() => ({ results: [] }))
+            ]);
+            
+            return { ...details, credits, videos, isFallback: false };
+        } catch (error) {
+            console.warn('Failed to fetch TMDB data for ID:', tmdbId, error);
+            
+            // Provide fallback data for missing TMDB entries
+            return {
+                id: originalId,
+                title: 'Content Not Found',
+                overview: 'This content may not be available in TMDB or the ID may be incorrect.',
+                poster_path: null,
+                backdrop_path: null,
+                vote_average: 0,
+                release_date: '',
+                genres: [],
+                credits: { cast: [], crew: [] },
+                videos: { results: [] },
+                isFallback: true,
+                originalId: originalId,
+                tmdbId: tmdbId
+            };
+        }
     }
 
     createModal(details, mediaType) {
@@ -70,10 +133,18 @@ class MediaDetailsModal {
         const runtime = details.runtime || (details.episode_run_time && details.episode_run_time[0]) || '';
         const rating = details.vote_average ? details.vote_average.toFixed(1) : 'N/A';
         const overview = details.overview || 'No description available.';
+        const tagline = details.tagline || '';
+        const status = details.status || 'N/A';
+        const contentRating = details.content_rating || 'NR';
+        
+        // Handle fallback cases gracefully
+        const isFallback = details.isFallback || false;
+        const fallbackNotice = isFallback ? 
+            '<div class="fallback-notice">⚠️ Limited metadata available from TMDB</div>' : '';
         
         const backdropUrl = details.backdrop_path 
             ? `https://image.tmdb.org/t/p/w1280${details.backdrop_path}`
-            : '';
+            : '/placeholder-backdrop.jpg';
         
         const posterUrl = details.poster_path 
             ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
@@ -83,6 +154,9 @@ class MediaDetailsModal {
         const cast = details.credits && details.credits.cast 
             ? details.credits.cast.slice(0, 5).map(c => c.name).join(', ')
             : '';
+        const director = details.credits?.crew?.find(person => person.job === 'Director')?.name || 'N/A';
+        const productionCompanies = details.production_companies?.map(company => company.name).join(', ') || 'N/A';
+        const keywords = details.keywords?.keywords?.map(k => k.name).slice(0, 5).join(', ') || 'N/A';
 
         modal.innerHTML = `
             <div class="modal-content media-details-content">
@@ -98,6 +172,7 @@ class MediaDetailsModal {
                                 </div>
                                 <div class="media-details-info">
                                     <h1 class="media-details-title">${title}</h1>
+                                    ${fallbackNotice}
                                     <div class="media-details-meta">
                                         <span class="media-year">${year}</span>
                                         ${runtime ? `<span class="media-runtime">${runtime} min</span>` : ''}
@@ -107,11 +182,11 @@ class MediaDetailsModal {
                                     <p class="media-overview">${overview}</p>
                                     ${cast ? `<p class="media-cast"><strong>Cast:</strong> ${cast}</p>` : ''}
                                     <div class="media-actions">
-                                        <button class="btn-primary play-button" onclick="mediaDetailsModal.playMedia()">
+                                        <button class="btn-primary play-button" onclick="mediaDetailsModal.playMedia()" ${isFallback ? 'disabled title="Streaming may not be available"' : ''}>
                                             <svg viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M8 5v14l11-7z"/>
                                             </svg>
-                                            Play
+                                            ${isFallback ? 'Limited Info' : 'Play'}
                                         </button>
                                         <button class="btn-secondary" onclick="mediaDetailsModal.addToWatchlist()">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -190,6 +265,32 @@ class MediaDetailsModal {
         const style = document.createElement('style');
         style.id = 'media-details-modal-styles';
         style.textContent = `
+            .media-tagline {
+                font-style: italic;
+                color: rgba(255,255,255,0.7);
+                margin-bottom: 12px;
+            }
+
+            .media-status {
+                color: #4CAF50;
+                font-weight: 500;
+            }
+
+            .media-production,
+            .media-keywords {
+                font-size: 14px;
+                color: rgba(255,255,255,0.7);
+                margin-top: 8px;
+            }
+
+            .content-rating {
+                background: rgba(0,0,0,0.6);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 600;
+            }
             .media-details-modal .modal-content {
                 max-width: 900px;
                 width: 90vw;
@@ -227,6 +328,75 @@ class MediaDetailsModal {
             .media-details-poster img {
                 width: 200px;
                 height: 300px;
+                object-fit: cover;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+
+            .fallback-notice {
+                background: rgba(255, 193, 7, 0.2);
+                border: 1px solid rgba(255, 193, 7, 0.3);
+                color: #ffc107;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                margin-bottom: 10px;
+                display: inline-block;
+            }
+
+            .media-details-title {
+                font-size: 2.5em;
+                margin: 0 0 10px 0;
+                color: white;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            }
+
+            .media-details-meta {
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                margin-bottom: 15px;
+                flex-wrap: wrap;
+            }
+
+            .media-year, .media-runtime, .media-rating, .media-genres {
+                background: rgba(0,0,0,0.6);
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+
+            .media-rating {
+                color: #ffd700;
+            }
+
+            .media-overview {
+                font-size: 16px;
+                line-height: 1.6;
+                margin-bottom: 15px;
+                color: rgba(255,255,255,0.9);
+            }
+
+            .media-cast {
+                font-size: 14px;
+                color: rgba(255,255,255,0.8);
+                margin-bottom: 20px;
+            }
+
+            .media-actions {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .media-actions button:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .media-actions button:disabled:hover {
+                transform: none;
+            };
                 object-fit: cover;
                 border-radius: var(--border-radius);
                 box-shadow: var(--shadow-hover);

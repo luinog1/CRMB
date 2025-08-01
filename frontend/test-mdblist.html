@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MDBList Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+        }
+        input {
+            background: #333;
+            color: white;
+            width: 300px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .results {
+            background: #333;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>MDBList Integration Test</h1>
+    
+    <div class="test-section">
+        <h2>API Key Setup</h2>
+        <input type="password" id="api-key" placeholder="Enter MDBList API Key">
+        <button onclick="setApiKey()">Set API Key</button>
+        <div id="api-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Search Test</h2>
+        <input type="text" id="search-query" placeholder="Search for movies/shows" value="Inception">
+        <select id="search-type">
+            <option value="">Any Type</option>
+            <option value="movie">Movies</option>
+            <option value="show">TV Shows</option>
+        </select>
+        <button onclick="testSearch()">Search</button>
+        <div id="search-results" class="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Get by ID Test</h2>
+        <input type="text" id="item-id" placeholder="Enter IMDb ID (e.g., tt1375666)" value="tt1375666">
+        <button onclick="testGetById()">Get Details</button>
+        <div id="details-results" class="results"></div>
+    </div>
+
+    <script src="js/mdblist-browser.js"></script>
+    <script>
+        let mdbClient = null;
+        
+        function setApiKey() {
+            const apiKey = document.getElementById('api-key').value.trim();
+            const statusEl = document.getElementById('api-status');
+            
+            if (!apiKey) {
+                statusEl.innerHTML = '<span class="error">Please enter an API key</span>';
+                return;
+            }
+            
+            try {
+                mdbClient = new MDBList(apiKey);
+                statusEl.innerHTML = '<span class="success">API key set successfully!</span>';
+                localStorage.setItem('mdblist_test_api_key', apiKey);
+            } catch (error) {
+                statusEl.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function testSearch() {
+            const resultsEl = document.getElementById('search-results');
+            
+            if (!mdbClient) {
+                resultsEl.innerHTML = '<span class="error">Please set API key first</span>';
+                return;
+            }
+            
+            const query = document.getElementById('search-query').value.trim();
+            const type = document.getElementById('search-type').value;
+            
+            if (!query) {
+                resultsEl.innerHTML = '<span class="error">Please enter a search query</span>';
+                return;
+            }
+            
+            resultsEl.innerHTML = 'Searching...';
+            
+            try {
+                const results = await mdbClient.search(query, null, type || null);
+                resultsEl.innerHTML = `<pre>${JSON.stringify(results, null, 2)}</pre>`;
+            } catch (error) {
+                resultsEl.innerHTML = `<span class="error">Search failed: ${error.message}</span>`;
+            }
+        }
+        
+        async function testGetById() {
+            const resultsEl = document.getElementById('details-results');
+            
+            if (!mdbClient) {
+                resultsEl.innerHTML = '<span class="error">Please set API key first</span>';
+                return;
+            }
+            
+            const itemId = document.getElementById('item-id').value.trim();
+            
+            if (!itemId) {
+                resultsEl.innerHTML = '<span class="error">Please enter an item ID</span>';
+                return;
+            }
+            
+            resultsEl.innerHTML = 'Fetching details...';
+            
+            try {
+                let details;
+                if (itemId.startsWith('tt')) {
+                    details = await mdbClient.byImdbID(itemId);
+                } else {
+                    details = await mdbClient.byTmdbID(itemId);
+                }
+                resultsEl.innerHTML = `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+            } catch (error) {
+                resultsEl.innerHTML = `<span class="error">Failed to get details: ${error.message}</span>`;
+            }
+        }
+        
+        // Load saved API key on page load
+        window.addEventListener('load', () => {
+            const savedKey = localStorage.getItem('mdblist_test_api_key');
+            if (savedKey) {
+                document.getElementById('api-key').value = savedKey;
+                setApiKey();
+            }
+        });
+    </script>
+</body>
+</html>

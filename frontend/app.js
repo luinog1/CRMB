@@ -27,6 +27,9 @@ class CrumbleApp {
         // Initialize MDBList integration
         this.mdblistIntegration = new MDBListIntegration(this);
         
+        // Make MDBList integration globally available
+        window.mdbListIntegration = this.mdblistIntegration;
+        
         // Initialize TMDB integration
         this.tmdbIntegration = new TMDBIntegration(this);
         

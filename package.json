@@ -9,10 +9,12 @@
     "serve": "cd frontend && python3 -m http.server 8080",
     "proxy": "node backend/mdblist-proxy.js",
     "tmdb-proxy": "node backend/tmdb-proxy.js",
+    "mdblist-service": "node backend/mdblist-proxy.js",
     "dev:full": "concurrently \"npm run proxy\" \"cd frontend && python3 -m http.server 3001\"",
     "dev:complete": "concurrently \"npm run proxy\" \"npm run tmdb-proxy\" \"npm run dev\"",
     "build": "echo 'No build process required - static files ready to serve'",
-    "test": "echo 'No tests specified yet'",
+    "test": "node test-mdblist-lib.js",
+    "test:mdblist": "node test-mdblist-lib.js",
     "lint": "echo 'No linting configured yet'"
   },
   "keywords": [
@@ -41,13 +43,14 @@
     "node": ">=12.0.0"
   },
   "dependencies": {
-    "express": "^4.18.2",
     "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mdblist-lib": "^1.0.2",
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
-    "http-server": "^14.1.1",
-    "concurrently": "^7.6.0"
+    "concurrently": "^7.6.0",
+    "http-server": "^14.1.1"
   },
   "browserslist": [
     "> 1%",
