@@ -7,6 +7,10 @@
     "start": "cd frontend && npx http-server -p 8080 -o",
     "dev": "cd frontend && npx http-server -p 3000 -o",
     "serve": "cd frontend && python3 -m http.server 8080",
+    "proxy": "node backend/mdblist-proxy.js",
+    "tmdb-proxy": "node backend/tmdb-proxy.js",
+    "dev:full": "concurrently \"npm run proxy\" \"cd frontend && python3 -m http.server 3001\"",
+    "dev:complete": "concurrently \"npm run proxy\" \"npm run tmdb-proxy\" \"npm run dev\"",
     "build": "echo 'No build process required - static files ready to serve'",
     "test": "echo 'No tests specified yet'",
     "lint": "echo 'No linting configured yet'"
@@ -36,8 +40,14 @@
   "engines": {
     "node": ">=12.0.0"
   },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "node-fetch": "^2.7.0"
+  },
   "devDependencies": {
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "concurrently": "^7.6.0"
   },
   "browserslist": [
     "> 1%",

@@ -3,6 +3,7 @@ class HomeTab {
     constructor(app) {
         this.app = app;
         this.catalogCarousel = new CatalogCarousel(app);
+        this.catalogGrid = new CatalogGrid(app);
         this.heroBanner = new HeroBanner(app);
     }
 
@@ -32,6 +33,9 @@ class HomeTab {
                 promises.push(this.loadPopularSeries());
             }
 
+            // Load addon catalogs
+            promises.push(this.loadAddonCatalogs());
+
             await Promise.all(promises);
             
         } catch (error) {
@@ -52,9 +56,31 @@ class HomeTab {
             
             const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('trending-movies-grid');
+            const section = document.getElementById('trending-movies');
             
-            if (container) {
-                this.catalogCarousel.render(container, allResults, 'movie', 'Trending Movies');
+            if (container && section) {
+                // Create header with title and see all button
+                const existingHeader = section.querySelector('.section-header');
+                if (!existingHeader) {
+                    const titleElement = section.querySelector('.carousel-title');
+                    if (titleElement) {
+                        const headerElement = document.createElement('div');
+                        headerElement.className = 'section-header';
+                        
+                        const seeAllButton = document.createElement('button');
+                        seeAllButton.className = 'see-all-btn';
+                        seeAllButton.textContent = 'See All';
+                        seeAllButton.onclick = () => this.showAllCatalogItems('trending-movies', 'Trending Movies', allResults, 'movie');
+                        
+                        headerElement.appendChild(titleElement);
+                        headerElement.appendChild(seeAllButton);
+                        section.insertBefore(headerElement, container);
+                    }
+                }
+                
+                // Limit to 30 items for carousel display
+                const displayContent = allResults.slice(0, 30);
+                this.catalogCarousel.render(container, displayContent, 'movie');
                 this.showSection('trending-movies');
             }
         } catch (error) {
@@ -73,9 +99,31 @@ class HomeTab {
             
             const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('popular-movies-grid');
+            const section = document.getElementById('popular-movies');
             
-            if (container) {
-                this.catalogCarousel.render(container, allResults, 'movie', 'Popular Movies');
+            if (container && section) {
+                // Create header with title and see all button
+                const existingHeader = section.querySelector('.section-header');
+                if (!existingHeader) {
+                    const titleElement = section.querySelector('.carousel-title');
+                    if (titleElement) {
+                        const headerElement = document.createElement('div');
+                        headerElement.className = 'section-header';
+                        
+                        const seeAllButton = document.createElement('button');
+                        seeAllButton.className = 'see-all-btn';
+                        seeAllButton.textContent = 'See All';
+                        seeAllButton.onclick = () => this.showAllCatalogItems('popular-movies', 'Popular Movies', allResults, 'movie');
+                        
+                        headerElement.appendChild(titleElement);
+                        headerElement.appendChild(seeAllButton);
+                        section.insertBefore(headerElement, container);
+                    }
+                }
+                
+                // Limit to 30 items for carousel display
+                const displayContent = allResults.slice(0, 30);
+                this.catalogCarousel.render(container, displayContent, 'movie');
                 this.showSection('popular-movies');
             }
         } catch (error) {
@@ -94,9 +142,31 @@ class HomeTab {
             
             const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('trending-series-grid');
+            const section = document.getElementById('trending-series');
             
-            if (container) {
-                this.catalogCarousel.render(container, allResults, 'tv', 'Trending Series');
+            if (container && section) {
+                // Create header with title and see all button
+                const existingHeader = section.querySelector('.section-header');
+                if (!existingHeader) {
+                    const titleElement = section.querySelector('.carousel-title');
+                    if (titleElement) {
+                        const headerElement = document.createElement('div');
+                        headerElement.className = 'section-header';
+                        
+                        const seeAllButton = document.createElement('button');
+                        seeAllButton.className = 'see-all-btn';
+                        seeAllButton.textContent = 'See All';
+                        seeAllButton.onclick = () => this.showAllCatalogItems('trending-series', 'Trending Series', allResults, 'tv');
+                        
+                        headerElement.appendChild(titleElement);
+                        headerElement.appendChild(seeAllButton);
+                        section.insertBefore(headerElement, container);
+                    }
+                }
+                
+                // Limit to 30 items for carousel display
+                const displayContent = allResults.slice(0, 30);
+                this.catalogCarousel.render(container, displayContent, 'tv');
                 this.showSection('trending-series');
             }
         } catch (error) {
@@ -115,9 +185,31 @@ class HomeTab {
             
             const allResults = [...page1.results, ...page2.results];
             const container = document.getElementById('popular-series-grid');
+            const section = document.getElementById('popular-series');
             
-            if (container) {
-                this.catalogCarousel.render(container, allResults, 'tv', 'Popular Series');
+            if (container && section) {
+                // Create header with title and see all button
+                const existingHeader = section.querySelector('.section-header');
+                if (!existingHeader) {
+                    const titleElement = section.querySelector('.carousel-title');
+                    if (titleElement) {
+                        const headerElement = document.createElement('div');
+                        headerElement.className = 'section-header';
+                        
+                        const seeAllButton = document.createElement('button');
+                        seeAllButton.className = 'see-all-btn';
+                        seeAllButton.textContent = 'See All';
+                        seeAllButton.onclick = () => this.showAllCatalogItems('popular-series', 'Popular Series', allResults, 'tv');
+                        
+                        headerElement.appendChild(titleElement);
+                        headerElement.appendChild(seeAllButton);
+                        section.insertBefore(headerElement, container);
+                    }
+                }
+                
+                // Limit to 30 items for carousel display
+                const displayContent = allResults.slice(0, 30);
+                this.catalogCarousel.render(container, displayContent, 'tv');
                 this.showSection('popular-series');
             }
         } catch (error) {
@@ -220,24 +312,83 @@ class HomeTab {
             section.className = 'catalog-section';
             section.id = sectionId;
             
+            // Create header with title and see all button
+            const headerElement = document.createElement('div');
+            headerElement.className = 'section-header';
+            
             const titleElement = document.createElement('h2');
             titleElement.className = 'section-title';
             titleElement.textContent = title;
             
-            const gridElement = document.createElement('div');
-            gridElement.className = 'catalog-grid';
-            gridElement.id = `${sectionId}-grid`;
+            const seeAllButton = document.createElement('button');
+            seeAllButton.className = 'see-all-btn';
+            seeAllButton.textContent = 'See All';
+            seeAllButton.onclick = () => this.showAllCatalogItems(sectionId, title, content, mediaType);
             
-            section.appendChild(titleElement);
-            section.appendChild(gridElement);
+            headerElement.appendChild(titleElement);
+            headerElement.appendChild(seeAllButton);
+            
+            // Use carousel for MDBList catalogs, grid for others  
+            const isCarousel = sectionId.includes('catalog-') && (title.toLowerCase().includes('mdblist') || title.includes('(mdblist)'));
+            const containerElement = document.createElement('div');
+            containerElement.className = isCarousel ? 'catalog-carousel' : 'catalog-grid';
+            containerElement.id = `${sectionId}-container`;
+            
+            section.appendChild(headerElement);
+            section.appendChild(containerElement);
             contentSections.appendChild(section);
         }
 
-        const container = document.getElementById(`${sectionId}-grid`);
+        const container = document.getElementById(`${sectionId}-container`);
         if (container && content.length > 0) {
-            this.catalogGrid.render(container, content, mediaType);
+            // Limit to 30 items for carousel display
+            const displayContent = container.className.includes('carousel') ? content.slice(0, 30) : content;
+            
+            if (container.className.includes('carousel')) {
+                this.catalogCarousel.render(container, displayContent, mediaType);
+            } else {
+                this.catalogGrid.render(container, displayContent, mediaType);
+            }
             this.showSection(sectionId);
         }
+    }
+    
+    showAllCatalogItems(sectionId, title, content, mediaType) {
+        // Create a modal or new page to show all catalog items
+        const modal = document.createElement('div');
+        modal.className = 'catalog-modal';
+        modal.innerHTML = `
+            <div class="catalog-modal-content">
+                <div class="catalog-modal-header">
+                    <h2>${title} - All Items (${content.length})</h2>
+                    <button class="catalog-modal-close">&times;</button>
+                </div>
+                <div class="catalog-modal-body">
+                    <div class="catalog-grid" id="modal-catalog-grid"></div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Render all items in the modal
+        const modalGrid = modal.querySelector('#modal-catalog-grid');
+        if (modalGrid) {
+            this.catalogGrid.render(modalGrid, content, mediaType);
+        }
+        
+        // Close modal functionality
+        const closeBtn = modal.querySelector('.catalog-modal-close');
+        closeBtn.onclick = () => {
+            document.body.removeChild(modal);
+        };
+        
+        // Close on backdrop click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        };
     }
 
     // Method to remove custom sections
@@ -301,6 +452,52 @@ class HomeTab {
                 }
             }
         });
+    }
+
+    async loadAddonCatalogs() {
+        try {
+            if (!this.app.catalogManager) return;
+            
+            // Get all enabled catalogs from catalog manager
+            const enabledCatalogs = this.app.catalogManager.getEnabledCatalogs();
+            
+            // Remove existing addon sections first
+            this.removeAddonSections();
+            
+            for (const catalog of enabledCatalogs) {
+                if (catalog.items && catalog.items.length > 0) {
+                    const sectionId = `catalog-${catalog.id}`;
+                    const title = `${catalog.name} (${catalog.source})`;
+                    
+                    // Add section to home page
+                    this.addCustomSection(sectionId, title, catalog.items, catalog.metadata.mediaType);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading addon catalogs:', error);
+        }
+    }
+
+    removeAddonSections() {
+        // Remove all existing catalog sections
+        const contentSections = document.querySelector('.content-sections');
+        if (contentSections) {
+            const catalogSections = contentSections.querySelectorAll('[id^="catalog-"]');
+            catalogSections.forEach(section => section.remove());
+        }
+    }
+
+    determineMediaType(catalogData) {
+        if (!catalogData || catalogData.length === 0) return 'movie';
+        
+        // Check the first few items to determine type
+        const sampleItems = catalogData.slice(0, 5);
+        const movieCount = sampleItems.filter(item => 
+            item.type === 'movie' || 
+            (item.id && item.id.startsWith('tt') && !item.episode_count)
+        ).length;
+        
+        return movieCount > sampleItems.length / 2 ? 'movie' : 'tv';
     }
 }
 

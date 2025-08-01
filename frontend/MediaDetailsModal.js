@@ -28,7 +28,20 @@ class MediaDetailsModal {
     }
 
     async fetchMediaDetails(id, mediaType) {
-        const endpoint = mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+        let tmdbId = id;
+        
+        // Check if the ID is an IMDb ID (starts with 'tt')
+        if (typeof id === 'string' && id.startsWith('tt')) {
+            try {
+                tmdbId = await this.app.convertImdbToTmdbId(id, mediaType);
+                console.log(`Converted IMDb ID ${id} to TMDB ID ${tmdbId}`);
+            } catch (error) {
+                console.error(`Failed to convert IMDb ID ${id} to TMDB ID:`, error);
+                throw new Error(`Unable to find TMDB data for ${id}`);
+            }
+        }
+        
+        const endpoint = mediaType === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`;
         const details = await this.app.fetchFromTMDB(endpoint);
         
         // Fetch additional data

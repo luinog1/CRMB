@@ -50,6 +50,69 @@ class SettingsTab {
                 this.updateDefaultTmdbSetting(e.target.checked);
             });
         }
+        
+        // Catalog Management Event Listeners
+        this.setupCatalogManagementListeners();
+    }
+    
+    setupCatalogManagementListeners() {
+        // Refresh all catalogs
+        const refreshBtn = document.getElementById('refresh-all-catalogs');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.refreshAllCatalogs();
+            });
+        }
+        
+        // Export catalogs
+        const exportBtn = document.getElementById('export-catalogs');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                this.exportCatalogs();
+            });
+        }
+        
+        // Import catalogs
+        const importInput = document.getElementById('import-catalogs');
+        if (importInput) {
+            importInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.importCatalogs(e.target.files[0]);
+                }
+            });
+        }
+        
+        // Filter listeners
+        const sourceFilter = document.getElementById('catalog-source-filter');
+        const typeFilter = document.getElementById('catalog-type-filter');
+        
+        if (sourceFilter) {
+            sourceFilter.addEventListener('change', () => {
+                this.filterCatalogs();
+            });
+        }
+        
+        if (typeFilter) {
+            typeFilter.addEventListener('change', () => {
+                this.filterCatalogs();
+            });
+        }
+        
+        // Auto-refresh settings
+        const autoRefreshToggle = document.getElementById('auto-refresh-catalogs');
+        const refreshInterval = document.getElementById('refresh-interval');
+        
+        if (autoRefreshToggle) {
+            autoRefreshToggle.addEventListener('change', (e) => {
+                this.updateAutoRefreshSetting(e.target.checked);
+            });
+        }
+        
+        if (refreshInterval) {
+            refreshInterval.addEventListener('change', (e) => {
+                this.updateRefreshInterval(parseInt(e.target.value));
+            });
+        }
 
         // Catalog toggles
         Object.keys(this.settings.catalogSettings).forEach(key => {
@@ -305,6 +368,197 @@ class SettingsTab {
 
         // Render add-ons
         this.renderAddonList();
+        this.renderCatalogManagement();
+    }
+    
+    renderCatalogManagement() {
+        if (!this.app.catalogManager) return;
+        
+        this.updateCatalogStats();
+        this.renderCatalogList();
+    }
+    
+    updateCatalogStats() {
+        if (!this.app.catalogManager) return;
+        
+        const allCatalogs = this.app.catalogManager.getAllCatalogs();
+        const enabledCatalogs = this.app.catalogManager.getEnabledCatalogs();
+        const totalItems = allCatalogs.reduce((sum, catalog) => {
+            return sum + (catalog.items ? catalog.items.length : 0);
+        }, 0);
+        
+        const totalCatalogsEl = document.getElementById('total-catalogs');
+        const enabledCatalogsEl = document.getElementById('enabled-catalogs');
+        const totalItemsEl = document.getElementById('total-items');
+        
+        if (totalCatalogsEl) totalCatalogsEl.textContent = allCatalogs.length;
+        if (enabledCatalogsEl) enabledCatalogsEl.textContent = enabledCatalogs.length;
+        if (totalItemsEl) totalItemsEl.textContent = totalItems.toLocaleString();
+    }
+    
+    renderCatalogList() {
+        const catalogList = document.getElementById('catalog-list');
+        if (!catalogList || !this.app.catalogManager) return;
+        
+        const allCatalogs = this.app.catalogManager.getAllCatalogs();
+        
+        if (allCatalogs.length === 0) {
+            catalogList.innerHTML = `
+                <div class="empty-catalog-state">
+                    <div class="empty-icon">📚</div>
+                    <h3>No Catalogs Available</h3>
+                    <p>Add some MDBList catalogs or Stremio add-ons to get started.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        catalogList.innerHTML = allCatalogs.map(catalog => {
+            const itemCount = catalog.items ? catalog.items.length : 0;
+            const mediaType = catalog.metadata?.mediaType || 'mixed';
+            const isEnabled = catalog.enabled !== false;
+            
+            return `
+                <div class="catalog-item ${isEnabled ? '' : 'disabled'}" data-catalog-id="${catalog.id}">
+                    <div class="catalog-info">
+                        <div class="catalog-name">${catalog.name}</div>
+                        <div class="catalog-meta">
+                            <span class="catalog-source">${catalog.source}</span>
+                            <span>${itemCount} items</span>
+                            <span>${mediaType}</span>
+                            <span>Updated: ${catalog.lastUpdated ? new Date(catalog.lastUpdated).toLocaleDateString() : 'Never'}</span>
+                        </div>
+                    </div>
+                    <div class="catalog-actions">
+                        <div class="catalog-toggle ${isEnabled ? 'enabled' : ''}" 
+                             onclick="settingsTab.toggleCatalog('${catalog.id}')"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    filterCatalogs() {
+        const sourceFilter = document.getElementById('catalog-source-filter')?.value || 'all';
+        const typeFilter = document.getElementById('catalog-type-filter')?.value || 'all';
+        
+        const catalogItems = document.querySelectorAll('.catalog-item');
+        
+        catalogItems.forEach(item => {
+            const catalogId = item.dataset.catalogId;
+            const catalog = this.app.catalogManager.getCatalogById(catalogId);
+            
+            if (!catalog) {
+                item.style.display = 'none';
+                return;
+            }
+            
+            const sourceMatch = sourceFilter === 'all' || catalog.source === sourceFilter;
+            const typeMatch = typeFilter === 'all' || catalog.metadata?.mediaType === typeFilter;
+            
+            item.style.display = (sourceMatch && typeMatch) ? 'flex' : 'none';
+        });
+    }
+    
+    async toggleCatalog(catalogId) {
+        if (!this.app.catalogManager) return;
+        
+        await this.app.catalogManager.toggleCatalog(catalogId);
+        this.renderCatalogManagement();
+        
+        // Refresh home tab if it exists
+        if (this.app.homeTab && this.app.homeTab.loadAddonCatalogs) {
+            await this.app.homeTab.loadAddonCatalogs();
+        }
+    }
+    
+    async refreshAllCatalogs() {
+        if (!this.app.catalogManager) return;
+        
+        const refreshBtn = document.getElementById('refresh-all-catalogs');
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '🔄 Refreshing...';
+        }
+        
+        try {
+            await this.app.catalogManager.refreshAllCatalogs();
+            this.renderCatalogManagement();
+            
+            // Refresh home tab
+            if (this.app.homeTab && this.app.homeTab.loadAddonCatalogs) {
+                await this.app.homeTab.loadAddonCatalogs();
+            }
+            
+            this.showNotification('All catalogs refreshed successfully!', 'success');
+         } catch (error) {
+             console.error('Error refreshing catalogs:', error);
+             this.showNotification('Error refreshing catalogs', 'error');
+        } finally {
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 Refresh All Catalogs';
+            }
+        }
+    }
+    
+    exportCatalogs() {
+        if (!this.app.catalogManager) return;
+        
+        try {
+            const catalogData = this.app.catalogManager.exportCatalogs();
+            const blob = new Blob([JSON.stringify(catalogData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `crmb-catalogs-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.showNotification('Catalogs exported successfully!', 'success');
+         } catch (error) {
+             console.error('Error exporting catalogs:', error);
+             this.showNotification('Error exporting catalogs', 'error');
+        }
+    }
+    
+    async importCatalogs(file) {
+        if (!this.app.catalogManager) return;
+        
+        try {
+            const text = await file.text();
+            const catalogData = JSON.parse(text);
+            
+            await this.app.catalogManager.importCatalogs(catalogData);
+            this.renderCatalogManagement();
+            
+            // Refresh home tab
+            if (this.app.homeTab && this.app.homeTab.loadAddonCatalogs) {
+                await this.app.homeTab.loadAddonCatalogs();
+            }
+            
+            this.showNotification('Catalogs imported successfully!', 'success');
+         } catch (error) {
+             console.error('Error importing catalogs:', error);
+             this.showNotification('Error importing catalogs. Please check the file format.', 'error');
+        }
+    }
+    
+    updateAutoRefreshSetting(enabled) {
+        localStorage.setItem('catalog_auto_refresh', enabled.toString());
+        if (this.app.catalogManager) {
+            this.app.catalogManager.setAutoRefresh(enabled);
+        }
+    }
+    
+    updateRefreshInterval(minutes) {
+        localStorage.setItem('catalog_refresh_interval', minutes.toString());
+        if (this.app.catalogManager) {
+            this.app.catalogManager.setRefreshInterval(minutes);
+        }
     }
 
     renderAddonList() {
@@ -789,7 +1043,40 @@ class SettingsTab {
             this.app.showNotification('Failed to import settings', 'error');
         }
     }
+    
+    showNotification(message, type = 'info') {
+        // Create a simple notification system
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+            background: ${type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6'};
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
 }
 
 // Make SettingsTab available globally
 window.SettingsTab = SettingsTab;
+
+// Global reference for onclick handlers
+let settingsTab = null;

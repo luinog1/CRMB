@@ -239,6 +239,80 @@
                         </section>
                         
                         <section class="settings-section">
+                            <h2>Catalog Management</h2>
+                            <p class="section-description">Manage all your catalogs from different sources including MDBList, TMDB, and Stremio add-ons.</p>
+                            <div class="catalog-management">
+                                <div class="catalog-stats" id="catalog-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-number" id="total-catalogs">0</span>
+                                        <span class="stat-label">Total Catalogs</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-number" id="enabled-catalogs">0</span>
+                                        <span class="stat-label">Enabled</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-number" id="total-items">0</span>
+                                        <span class="stat-label">Total Items</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="catalog-controls">
+                                    <button id="refresh-all-catalogs" class="btn-primary">
+                                        🔄 Refresh All Catalogs
+                                    </button>
+                                    <button id="export-catalogs" class="btn-secondary">
+                                        📤 Export Catalogs
+                                    </button>
+                                    <label for="import-catalogs" class="btn-secondary file-input-label">
+                                        📥 Import Catalogs
+                                        <input type="file" id="import-catalogs" accept=".json" style="display: none;">
+                                    </label>
+                                </div>
+                                
+                                <div class="catalog-filters">
+                                    <div class="filter-group">
+                                        <label>Filter by Source:</label>
+                                        <select id="catalog-source-filter">
+                                            <option value="all">All Sources</option>
+                                            <option value="mdblist">MDBList</option>
+                                            <option value="tmdb">TMDB</option>
+                                            <option value="stremio">Stremio Add-ons</option>
+                                        </select>
+                                    </div>
+                                    <div class="filter-group">
+                                        <label>Filter by Type:</label>
+                                        <select id="catalog-type-filter">
+                                            <option value="all">All Types</option>
+                                            <option value="movie">Movies</option>
+                                            <option value="tv">TV Shows</option>
+                                            <option value="mixed">Mixed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="catalog-list" id="catalog-list">
+                                    <!-- Catalogs will be dynamically loaded -->
+                                </div>
+                                
+                                <div class="catalog-settings">
+                                    <h3>Auto-Refresh Settings</h3>
+                                    <div class="toggle-item">
+                                        <label class="toggle-label">
+                                            <input type="checkbox" id="auto-refresh-catalogs" checked>
+                                            <span class="toggle-slider"></span>
+                                            Enable Auto-Refresh
+                                        </label>
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="refresh-interval">Refresh Interval (minutes):</label>
+                                        <input type="number" id="refresh-interval" min="5" max="1440" value="30" class="settings-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <section class="settings-section">
                             <h2>Add-ons</h2>
                             <p class="section-description">Manage your Stremio add-ons to access different streaming sources and content libraries.</p>
                             <div class="addon-management">
@@ -376,6 +450,8 @@
     <script src="LibraryTab.js"></script>
     <script src="SettingsTab.js"></script>
     <script src="MDBListIntegration.js"></script>
+    <script src="TMDBIntegration.js"></script>
+    <script src="CatalogManager.js"></script>
     <script src="CatalogGrid.js"></script>
     <script src="CatalogCarousel.js?v=2"></script>
     <script src="MediaDetailsModal.js"></script>

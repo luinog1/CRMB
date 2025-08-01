@@ -1,7 +1,7 @@
 // CRUMBLE - Main Application Controller
 class CrumbleApp {
     constructor() {
-        this.currentTab = 'home';
+        this.currentTab = localStorage.getItem('current_tab') || 'home';
         this.initializeTmdbApiKey();
         this.baseImageUrl = 'https://image.tmdb.org/t/p/w500';
         this.baseBackdropUrl = 'https://image.tmdb.org/t/p/w1280';
@@ -26,6 +26,12 @@ class CrumbleApp {
         
         // Initialize MDBList integration
         this.mdblistIntegration = new MDBListIntegration(this);
+        
+        // Initialize TMDB integration
+        this.tmdbIntegration = new TMDBIntegration(this);
+        
+        // Initialize catalog manager
+        this.catalogManager = new CatalogManager(this);
         
         this.init();
     }
@@ -169,6 +175,7 @@ class CrumbleApp {
         document.getElementById(`${tabName}-tab`).classList.add('active');
 
         this.currentTab = tabName;
+        localStorage.setItem('current_tab', tabName);
 
         // Load tab-specific content
         switch (tabName) {
@@ -201,14 +208,15 @@ class CrumbleApp {
             if (window.LibraryTab) {
                 window.libraryTab = new LibraryTab(this);
             }
+            if (window.SettingsTab) {
+                window.settingsTab = new SettingsTab(this);
+            }
             if (window.HeroBanner) {
                 window.heroBanner = new HeroBanner(this);
             }
 
-            // Load home content by default
-            if (window.homeTab) {
-                await window.homeTab.loadContent();
-            }
+            // Restore saved tab or load home by default
+            this.switchTab(this.currentTab);
         } catch (error) {
             console.error('Error loading initial content:', error);
             this.showNotification('Error loading content. Please check your connection.', 'error');
@@ -312,6 +320,39 @@ class CrumbleApp {
     }
 
     async fetchFromTMDB(endpoint, params = {}) {
+        // Try to use TMDB proxy first if available and user has their own API key
+        const userApiKey = localStorage.getItem('user_tmdb_api_key');
+        if (this.tmdbIntegration && this.tmdbIntegration.isProxyAvailable && userApiKey) {
+            try {
+                // Build query string for proxy
+                const queryParams = new URLSearchParams();
+                Object.entries(params).forEach(([key, value]) => {
+                    if (value !== undefined && value !== null) {
+                        queryParams.append(key, value);
+                    }
+                });
+                
+                const queryString = queryParams.toString();
+                const proxyEndpoint = queryString ? `${endpoint}?${queryString}` : endpoint;
+                
+                const response = await fetch(`${this.tmdbIntegration.proxyUrl}/api/tmdb${proxyEndpoint}`, {
+                    headers: {
+                        'x-tmdb-api-key': userApiKey,
+                        'accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    return await response.json();
+                }
+                
+                console.warn('TMDB proxy failed, falling back to direct API');
+            } catch (error) {
+                console.warn('TMDB proxy error, falling back to direct API:', error);
+            }
+        }
+        
+        // Fallback to direct API call
         const url = new URL(`https://api.themoviedb.org/3${endpoint}`);
         
         Object.entries(params).forEach(([key, value]) => {
@@ -337,6 +378,27 @@ class CrumbleApp {
         }
 
         return response.json();
+    }
+    
+    async convertImdbToTmdbId(imdbId, mediaType) {
+        try {
+            // Use TMDB's find endpoint to convert IMDb ID to TMDB ID
+            const findResult = await this.fetchFromTMDB(`/find/${imdbId}`, {
+                external_source: 'imdb_id'
+            });
+            
+            // Extract TMDB ID based on media type
+            if (mediaType === 'movie' && findResult.movie_results && findResult.movie_results.length > 0) {
+                return findResult.movie_results[0].id;
+            } else if (mediaType === 'tv' && findResult.tv_results && findResult.tv_results.length > 0) {
+                return findResult.tv_results[0].id;
+            }
+            
+            throw new Error(`No TMDB ID found for IMDb ID: ${imdbId}`);
+        } catch (error) {
+            console.error('Error converting IMDb ID to TMDB ID:', error);
+            throw error;
+        }
     }
 
     async queryStremioAddons(type, id, season = null, episode = null, title = null) {
