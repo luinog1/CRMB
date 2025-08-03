@@ -182,225 +182,173 @@
                 <div class="settings-container">
                     <div class="settings-header">
                         <h1>Settings</h1>
+                        <p class="settings-subtitle">Configure your streaming experience</p>
                     </div>
                     
                     <div class="settings-sections">
+                        <!-- TMDB Integration section will be added dynamically by TMDBIntegration.js -->
+                        
                         <section class="settings-section">
-                            <h2>API Configuration</h2>
+                            <h2>🎬 Catalog Management</h2>
+                            <p class="section-description">Manage your content catalogs and sources</p>
+                            
+                            <div class="catalog-stats" id="catalog-stats">
+                                <div class="stat-card">
+                                    <span class="stat-number" id="total-catalogs">0</span>
+                                    <span class="stat-label">Total Catalogs</span>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-number" id="enabled-catalogs">0</span>
+                                    <span class="stat-label">Enabled</span>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-number" id="total-items">0</span>
+                                    <span class="stat-label">Total Items</span>
+                                </div>
+                            </div>
+                            
+                            <div class="catalog-controls">
+                                <button id="refresh-all-catalogs" class="btn btn-primary">
+                                    <span class="btn-icon">🔄</span>
+                                    Refresh All
+                                </button>
+                                <button id="export-catalogs" class="btn btn-secondary">
+                                    <span class="btn-icon">📤</span>
+                                    Export
+                                </button>
+                                <label for="import-catalogs" class="btn btn-secondary">
+                                    <span class="btn-icon">📥</span>
+                                    Import
+                                    <input type="file" id="import-catalogs" accept=".json" style="display: none;">
+                                </label>
+                            </div>
+                            
                             <div class="setting-item">
-                                <label for="tmdb-api-key">TMDB API Key</label>
-                                <div class="tmdb-api-controls">
-                                    <input type="password" id="tmdb-api-key" placeholder="Enter your TMDB API key (optional)">
-                                    <button id="save-tmdb-key" class="btn-secondary save-btn">Save</button>
-                                </div>
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="toggle-default-tmdb" checked>
+                                <div class="toggle-container">
+                                    <input type="checkbox" id="auto-refresh-catalogs" class="toggle-input" checked>
+                                    <label for="auto-refresh-catalogs" class="toggle-label">
                                         <span class="toggle-slider"></span>
-                                        Use Default TMDB API
                                     </label>
+                                    <div class="toggle-content">
+                                        <span class="toggle-title">Auto-Refresh Catalogs</span>
+                                        <span class="toggle-description">Automatically refresh catalog content</span>
+                                    </div>
                                 </div>
-                                <p class="setting-description">Use your own TMDB API key for higher rate limits. Toggle off default API to use only your key.</p>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label for="refresh-interval" class="setting-label">Refresh Interval (minutes)</label>
+                                <input type="number" id="refresh-interval" min="5" max="1440" value="30" class="setting-input">
+                            </div>
+                            
+                            <div class="catalog-list" id="catalog-list">
+                                <!-- Catalogs will be dynamically loaded -->
                             </div>
                         </section>
                         
                         <section class="settings-section">
-                            <h2>Catalog Sources</h2>
-                            <div class="catalog-toggles">
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="toggle-movies" checked>
-                                        <span class="toggle-slider"></span>
-                                        Movies
-                                    </label>
-                                </div>
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="toggle-series" checked>
-                                        <span class="toggle-slider"></span>
-                                        TV Series
-                                    </label>
-                                </div>
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="toggle-trending" checked>
-                                        <span class="toggle-slider"></span>
-                                        Trending Content
-                                    </label>
-                                </div>
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="toggle-popular" checked>
-                                        <span class="toggle-slider"></span>
-                                        Popular Content
-                                    </label>
-                                </div>
+                            <h2>🔌 Add-ons</h2>
+                            <p class="section-description">Manage Stremio add-ons for streaming sources</p>
+                            
+                            <div class="addon-input-group">
+                                <input type="url" id="addon-url" placeholder="https://example.com/manifest.json" class="addon-input">
+                                <button id="add-addon-btn" class="btn btn-primary">
+                                    <span class="btn-icon">+</span>
+                                    Add
+                                </button>
+                            </div>
+                            
+                            <div class="addon-help">
+                                <p>💡 Add-ons provide access to different streaming sources</p>
+                                <p>🔗 Enter the full manifest URL (usually ends with /manifest.json)</p>
+                            </div>
+                            
+                            <div class="addon-list" id="addon-list">
+                                <!-- Add-ons will be dynamically loaded -->
                             </div>
                         </section>
                         
                         <section class="settings-section">
-                            <h2>Catalog Management</h2>
-                            <p class="section-description">Manage all your catalogs from different sources including MDBList, TMDB, and Stremio add-ons.</p>
-                            <div class="catalog-management">
-                                <div class="catalog-stats" id="catalog-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-number" id="total-catalogs">0</span>
-                                        <span class="stat-label">Total Catalogs</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-number" id="enabled-catalogs">0</span>
-                                        <span class="stat-label">Enabled</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-number" id="total-items">0</span>
-                                        <span class="stat-label">Total Items</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="catalog-controls">
-                                    <button id="refresh-all-catalogs" class="btn-primary">
-                                        🔄 Refresh All Catalogs
-                                    </button>
-                                    <button id="export-catalogs" class="btn-secondary">
-                                        📤 Export Catalogs
-                                    </button>
-                                    <label for="import-catalogs" class="btn-secondary file-input-label">
-                                        📥 Import Catalogs
-                                        <input type="file" id="import-catalogs" accept=".json" style="display: none;">
+                            <h2>📱 External Players</h2>
+                            <p class="section-description">Configure external video players</p>
+                            
+                            <div class="setting-item">
+                                <div class="toggle-container">
+                                    <input type="checkbox" id="enable-infuse" class="toggle-input" checked>
+                                    <label for="enable-infuse" class="toggle-label">
+                                        <span class="toggle-slider"></span>
                                     </label>
-                                </div>
-                                
-                                <div class="catalog-filters">
-                                    <div class="filter-group">
-                                        <label>Filter by Source:</label>
-                                        <select id="catalog-source-filter">
-                                            <option value="all">All Sources</option>
-                                            <option value="mdblist">MDBList</option>
-                                            <option value="tmdb">TMDB</option>
-                                            <option value="stremio">Stremio Add-ons</option>
-                                        </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label>Filter by Type:</label>
-                                        <select id="catalog-type-filter">
-                                            <option value="all">All Types</option>
-                                            <option value="movie">Movies</option>
-                                            <option value="tv">TV Shows</option>
-                                            <option value="mixed">Mixed</option>
-                                        </select>
+                                    <div class="toggle-content">
+                                        <span class="toggle-title">INFUSE</span>
+                                        <span class="toggle-description">Enable INFUSE player support</span>
                                     </div>
                                 </div>
-                                
-                                <div class="catalog-list" id="catalog-list">
-                                    <!-- Catalogs will be dynamically loaded -->
-                                </div>
-                                
-                                <div class="catalog-settings">
-                                    <h3>Auto-Refresh Settings</h3>
-                                    <div class="toggle-item">
-                                        <label class="toggle-label">
-                                            <input type="checkbox" id="auto-refresh-catalogs" checked>
-                                            <span class="toggle-slider"></span>
-                                            Enable Auto-Refresh
-                                        </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="toggle-container">
+                                    <input type="checkbox" id="enable-vlc" class="toggle-input" checked>
+                                    <label for="enable-vlc" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="toggle-content">
+                                        <span class="toggle-title">VLC</span>
+                                        <span class="toggle-description">Enable VLC player support</span>
                                     </div>
-                                    <div class="setting-group">
-                                        <label for="refresh-interval">Refresh Interval (minutes):</label>
-                                        <input type="number" id="refresh-interval" min="5" max="1440" value="30" class="settings-input">
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="toggle-container">
+                                    <input type="checkbox" id="enable-outplayer" class="toggle-input" checked>
+                                    <label for="enable-outplayer" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="toggle-content">
+                                        <span class="toggle-title">OUTPLAYER</span>
+                                        <span class="toggle-description">Enable OUTPLAYER support</span>
                                     </div>
                                 </div>
                             </div>
                         </section>
                         
                         <section class="settings-section">
-                            <h2>Add-ons</h2>
-                            <p class="section-description">Manage your Stremio add-ons to access different streaming sources and content libraries.</p>
-                            <div class="addon-management">
-                                <div class="addon-input-container">
-                                    <div class="addon-input-group">
-                                        <div class="input-wrapper">
-                                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                                            </svg>
-                                            <input type="url" id="addon-url" placeholder="https://example.com/manifest.json" class="addon-url-input">
-                                        </div>
-                                        <button id="add-addon-btn" class="addon-add-btn">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                                <line x1="5" y1="12" x2="19" y2="12"/>
-                                            </svg>
-                                            Add Add-on
-                                        </button>
-                                    </div>
-                                    <div class="addon-help">
-                                        <div class="help-item">
-                                            <span class="help-icon">💡</span>
-                                            <span>Add-ons provide access to different streaming sources and content libraries</span>
-                                        </div>
-                                        <div class="help-item">
-                                            <span class="help-icon">🔗</span>
-                                            <span>Enter the full manifest URL (usually ends with /manifest.json)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="addon-list" id="addon-list">
-                                    <!-- Add-ons will be dynamically loaded -->
-                                </div>
-                            </div>
-                        </section>
-                        
-                        <section class="settings-section">
-                            <h2>External Players</h2>
-                            <div class="player-settings">
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="enable-infuse" checked>
-                                        <span class="toggle-slider"></span>
-                                        INFUSE
-                                    </label>
-                                </div>
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="enable-vlc" checked>
-                                        <span class="toggle-slider"></span>
-                                        VLC
-                                    </label>
-                                </div>
-                                <div class="toggle-item">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="enable-outplayer" checked>
-                                        <span class="toggle-slider"></span>
-                                        OUTPLAYER
-                                    </label>
-                                </div>
-                            </div>
-                        </section>
-                        
-                        <section class="settings-section">
-                            <h2>Diagnostics & Troubleshooting</h2>
+                            <h2>🔧 Diagnostics</h2>
+                            <p class="section-description">Troubleshooting and maintenance tools</p>
+                            
                             <div class="diagnostic-controls">
-                                <button onclick="app.addonDiagnostics.performHealthCheck()" class="btn-primary">
-                                    🔍 Run Addon Health Check
+                                <button onclick="app.addonDiagnostics.performHealthCheck()" class="btn btn-primary">
+                                    <span class="btn-icon">🔍</span>
+                                    Health Check
                                 </button>
-                                <button onclick="app.addonDiagnostics.installCommonAddons()" class="btn-secondary">
-                                    📦 Install Popular Addons
+                                <button onclick="app.addonDiagnostics.installCommonAddons()" class="btn btn-secondary">
+                                    <span class="btn-icon">📦</span>
+                                    Install Popular
                                 </button>
-                                <button onclick="app.streamScraper.enableDebug()" class="btn-secondary">
-                                    🐛 Enable Debug Mode
+                                <button onclick="app.streamScraper.enableDebug()" class="btn btn-secondary">
+                                    <span class="btn-icon">🐛</span>
+                                    Debug Mode
                                 </button>
-                                <button onclick="console.log(app.streamScraper.getStats())" class="btn-secondary">
-                                    📊 Show Stats
+                                <button onclick="console.log(app.streamScraper.getStats())" class="btn btn-secondary">
+                                    <span class="btn-icon">📊</span>
+                                    Show Stats
                                 </button>
                             </div>
-                            <p class="setting-description">Diagnose addon connectivity issues and get recommendations for fixing streaming problems.</p>
                         </section>
                         
                         <section class="settings-section">
-                            <h2>Cache & Storage</h2>
+                            <h2>🗑️ Cache & Storage</h2>
+                            <p class="section-description">Manage application data and storage</p>
+                            
                             <div class="cache-controls">
-                                <button id="clear-cache-btn" class="danger-btn">Clear Cache</button>
-                                <button id="reset-settings-btn" class="danger-btn">Reset All Settings</button>
+                                <button id="clear-cache-btn" class="btn btn-danger">
+                                    <span class="btn-icon">🗑️</span>
+                                    Clear Cache
+                                </button>
+                                <button id="reset-settings-btn" class="btn btn-danger">
+                                    <span class="btn-icon">⚠️</span>
+                                    Reset Settings
+                                </button>
                             </div>
                         </section>
                     </div>

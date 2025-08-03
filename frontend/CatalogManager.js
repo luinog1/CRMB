@@ -45,15 +45,34 @@ class CatalogManager {
         const mdblistCatalogs = JSON.parse(localStorage.getItem('mdblist_saved_catalogs') || '[]');
         
         for (const catalog of mdblistCatalogs) {
+            const items = catalog.items || catalog.catalogs?.[0]?.metas || [];
+            
+            if (items.length > 0) {
+                console.log('Loading MDBList catalog:', catalog.name, 'with', items.length, 'items');
+            }
+            
+            // Items from MDBListIntegration are already enhanced, so use them directly
+            // but ensure poster URLs are properly formatted
+            const enhancedItems = items.map(item => {
+                const enhancedItem = { ...item };
+                
+                // Ensure poster URL is properly set
+                if (!enhancedItem.poster && enhancedItem.poster_path) {
+                    enhancedItem.poster = `https://image.tmdb.org/t/p/w500${enhancedItem.poster_path}`;
+                }
+                
+                return enhancedItem;
+            });
+            
             this.catalogs.set(catalog.id, {
                 id: catalog.id,
                 name: catalog.name,
                 description: catalog.description,
                 type: 'mdblist',
                 source: 'MDBList',
-                items: catalog.catalogs?.[0]?.metas || catalog.items || [],
+                items: enhancedItems,
                 metadata: {
-                    itemCount: catalog.catalogs?.[0]?.metas?.length || catalog.items?.length || 0,
+                    itemCount: enhancedItems.length,
                     mediaType: catalog.types?.[0] || 'mixed',
                     createdAt: Date.now(),
                     lastUpdated: Date.now()
@@ -62,6 +81,28 @@ class CatalogManager {
                 logo: catalog.logo || 'https://mdblist.com/favicon.ico',
                 manifest: catalog
             });
+        }
+    }
+
+
+
+    async convertImdbToTmdbId(imdbId, type) {
+        if (!this.app.tmdbIntegration) return null;
+        
+        try {
+            const endpoint = `/find/${imdbId}?external_source=imdb_id`;
+            const data = await this.app.tmdbIntegration.makeApiCall(endpoint);
+            
+            if (type === 'show' && data.tv_results && data.tv_results.length > 0) {
+                return data.tv_results[0].id;
+            } else if (type === 'movie' && data.movie_results && data.movie_results.length > 0) {
+                return data.movie_results[0].id;
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn(`Failed to convert IMDb ID ${imdbId} to TMDB ID:`, error);
+            return null;
         }
     }
 

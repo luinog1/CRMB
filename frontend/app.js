@@ -33,7 +33,7 @@ class CrumbleApp {
         // Initialize TMDB integration
         this.tmdbIntegration = new TMDBIntegration(this);
         
-        // Initialize catalog manager
+        // Initialize catalog manager after TMDB integration
         this.catalogManager = new CatalogManager(this);
         
         this.init();
@@ -58,6 +58,11 @@ class CrumbleApp {
         this.setupEventListeners();
         this.setupModals();
         this.loadSettings();
+        
+        // Initialize TMDB integration first
+        if (this.tmdbIntegration && this.tmdbIntegration.init) {
+            this.tmdbIntegration.init();
+        }
         
         // Wait for initial content to load before initializing MDBList integration
         await this.loadInitialContent();
@@ -96,17 +101,7 @@ class CrumbleApp {
     }
 
     setupSettingsHandlers() {
-        // TMDB API Key
-        const tmdbInput = document.getElementById('tmdb-api-key');
-        if (tmdbInput) {
-            tmdbInput.value = this.tmdbApiKey !== '90acb3adf6e0af93b6c0055ed8a721aa' ? this.tmdbApiKey : '';
-            tmdbInput.addEventListener('change', (e) => {
-                const newKey = e.target.value.trim();
-                this.tmdbApiKey = newKey || '90acb3adf6e0af93b6c0055ed8a721aa';
-                localStorage.setItem('tmdb_api_key', this.tmdbApiKey);
-                this.showNotification('API key updated successfully');
-            });
-        }
+        // TMDB settings are now handled by TMDBIntegration.js
 
         // Catalog toggles
         Object.keys(this.catalogSettings).forEach(key => {

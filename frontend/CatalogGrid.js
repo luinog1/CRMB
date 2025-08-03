@@ -33,16 +33,40 @@ class CatalogGrid {
         card.setAttribute('data-media-type', mediaType);
         card.setAttribute('data-media-id', item.id);
 
-        const title = mediaType === 'movie' ? item.title : item.name;
-        const releaseDate = mediaType === 'movie' ? item.release_date : item.first_air_date;
-        const posterUrl = this.app.getImageUrl(item.poster_path);
+        // Handle both TMDB and MDBList title formats
+        const title = item.title || item.name || 'Unknown Title';
+        
+        // Handle both TMDB and MDBList date formats
+        const releaseDate = item.release_date || item.first_air_date || item.released;
+        
+        // Enhanced poster handling with better TMDB integration
+        let posterUrl;
+        if (item.poster_path) {
+            // TMDB format - use poster_path
+            posterUrl = this.app.getImageUrl(item.poster_path);
+        } else if (item.poster && item.poster.startsWith('http')) {
+            // Full URL from MDBList or TMDB enhancement
+            posterUrl = item.poster;
+        } else if (item.poster) {
+            // Relative path - convert to TMDB URL
+            posterUrl = this.app.getImageUrl(item.poster);
+        } else {
+            // Fallback to placeholder
+            posterUrl = '/placeholder-poster.jpg';
+        }
+        
+        // Ensure we have a valid poster URL
+        if (!posterUrl || posterUrl === 'null' || posterUrl === 'undefined') {
+            posterUrl = '/placeholder-poster.jpg';
+        }
 
         card.innerHTML = `
             <img src="${posterUrl}" 
                  alt="${title}" 
                  class="media-poster"
                  loading="lazy"
-                 onerror="this.src='/placeholder-poster.jpg'">
+                 onerror="this.onerror=null; this.src='/placeholder-poster.jpg'; console.warn('Failed to load poster:', this.getAttribute('data-original-src'));"
+                 data-original-src="${posterUrl}">
             <div class="media-info">
                 <h3 class="media-title">${title}</h3>
                 <div class="media-meta">

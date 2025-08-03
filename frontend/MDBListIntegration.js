@@ -503,15 +503,49 @@ class MDBListIntegration {
         const enhancedItems = [];
         
         for (const item of listItems) {
+            // Enhanced poster URL construction
+            let posterUrl = null;
+            let backdropUrl = null;
+            
+            // Handle different poster formats from MDBList
+            if (item.poster_url && item.poster_url.startsWith('http')) {
+                posterUrl = item.poster_url;
+            } else if (item.poster && item.poster.startsWith('http')) {
+                posterUrl = item.poster;
+            } else if (item.poster && item.poster.startsWith('/')) {
+                posterUrl = `https://image.tmdb.org/t/p/w500${item.poster}`;
+            } else if (item.poster && item.poster.length > 0) {
+                posterUrl = `https://image.tmdb.org/t/p/w500/${item.poster}`;
+            }
+            
+            // Handle backdrop URLs
+            if (item.backdrop_url && item.backdrop_url.startsWith('http')) {
+                backdropUrl = item.backdrop_url;
+            } else if (item.backdrop && item.backdrop.startsWith('http')) {
+                backdropUrl = item.backdrop;
+            } else if (item.backdrop && item.backdrop.startsWith('/')) {
+                backdropUrl = `https://image.tmdb.org/t/p/original${item.backdrop}`;
+            } else if (item.backdrop && item.backdrop.length > 0) {
+                backdropUrl = `https://image.tmdb.org/t/p/original/${item.backdrop}`;
+            }
+            
             const enhancedItem = {
                 id: item.id || item.imdbid || item.tmdbid || `temp_${Math.random().toString(36).substr(2, 9)}`,
                 type: item.mediatype || item.type || 'movie',
-                name: item.title,
-                poster: item.poster_url || item.poster,
-                background: item.backdrop_url || item.backdrop,
+                title: item.title, // Primary title property for display components
+                name: item.title,  // Backup name property
+                poster: posterUrl,
+                poster_path: item.poster_path || item.poster, // TMDB-style poster path
+                background: backdropUrl,
+                backdrop_path: item.backdrop_path || item.backdrop, // TMDB-style backdrop path
                 description: item.description || item.plot || item.overview,
+                overview: item.description || item.plot || item.overview, // TMDB-style overview
                 year: item.year || item.release_date?.split('-')[0],
+                release_date: item.release_date || item.released,
+                first_air_date: item.first_air_date || (item.type === 'show' ? item.release_date : null),
                 imdbRating: item.imdbrating || item.imdb_rating,
+                vote_average: item.vote_average || item.imdbrating || item.imdb_rating,
+                vote_count: item.vote_count,
                 genres: item.genre ? (Array.isArray(item.genre) ? item.genre : item.genre.split(',').map(g => g.trim())) : [],
                 director: item.director,
                 cast: item.actors ? (Array.isArray(item.actors) ? item.actors : item.actors.split(',').map(a => a.trim())) : [],
@@ -521,57 +555,95 @@ class MDBListIntegration {
                 imdbid: item.imdbid,
                 tmdbid: item.tmdbid,
                 tvdbid: item.tvdbid,
-                traktid: item.traktid,
-                vote_average: item.vote_average,
-                vote_count: item.vote_count
+                traktid: item.traktid
             };
-
-            // Try to enhance with TMDB data if available
-            if (this.app.tmdbIntegration && (item.tmdbid || item.imdbid)) {
+            
+            // Enhanced TMDB data fetching with improved poster handling
+            if (this.app.tmdbIntegration && this.app.tmdbApiKey && (item.tmdbid || item.imdbid)) {
                 try {
                     let tmdbData;
-                    if (item.tmdbid) {
-                        tmdbData = enhancedItem.type === 'show' ? 
-                            await this.app.tmdbIntegration.getTVDetails(item.tmdbid) :
-                            await this.app.tmdbIntegration.getMovieDetails(item.tmdbid);
-                    } else if (item.imdbid) {
-                        // Convert IMDb ID to TMDB ID first
-                        const tmdbId = await this.app.convertImdbToTmdbId(item.imdbid, enhancedItem.type);
-                        if (tmdbId) {
-                            tmdbData = enhancedItem.type === 'show' ? 
-                                await this.app.tmdbIntegration.getTVDetails(tmdbId) :
-                                await this.app.tmdbIntegration.getMovieDetails(tmdbId);
-                        }
+                    let movieId = item.tmdbid;
+                    
+                    // Convert IMDb ID to TMDB ID if needed
+                    if (!movieId && item.imdbid) {
+                        movieId = await this.app.convertImdbToTmdbId(item.imdbid, enhancedItem.type);
                     }
-
-                    if (tmdbData) {
-                        // Enhance with TMDB data
-                        enhancedItem.poster = tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : enhancedItem.poster;
-                        enhancedItem.background = tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/w1280${tmdbData.backdrop_path}` : enhancedItem.background;
-                        enhancedItem.description = tmdbData.overview || enhancedItem.description;
-                        enhancedItem.year = tmdbData.release_date?.split('-')[0] || tmdbData.first_air_date?.split('-')[0] || enhancedItem.year;
-                        enhancedItem.genres = tmdbData.genres?.map(g => g.name) || enhancedItem.genres;
-                        enhancedItem.runtime = tmdbData.runtime || tmdbData.episode_run_time?.[0] || enhancedItem.runtime;
-                        enhancedItem.vote_average = tmdbData.vote_average || enhancedItem.vote_average;
-                        enhancedItem.vote_count = tmdbData.vote_count || enhancedItem.vote_count;
-                        enhancedItem.release_date = tmdbData.release_date || tmdbData.first_air_date;
+                    
+                    if (movieId) {
+                        // Use the updated fetch logic as requested
+                        const mediaType = enhancedItem.type === 'show' ? 'tv' : 'movie';
+                        const url = `https://api.themoviedb.org/3/${mediaType}/${movieId}?api_key=${this.app.tmdbApiKey}&language=en-US`;
                         
-                        // Additional TMDB metadata
-                        enhancedItem.tagline = tmdbData.tagline;
-                        enhancedItem.status = tmdbData.status;
-                        enhancedItem.production_companies = tmdbData.production_companies?.map(c => c.name);
-                        enhancedItem.keywords = tmdbData.keywords?.keywords?.map(k => k.name) || tmdbData.keywords?.results?.map(k => k.name);
-                        enhancedItem.recommendations = tmdbData.recommendations?.results;
-                        enhancedItem.similar = tmdbData.similar?.results;
-                        enhancedItem.watch_providers = tmdbData['watch/providers']?.results;
-                        enhancedItem.content_rating = tmdbData.content_ratings?.results?.find(r => r.iso_3166_1 === 'US')?.rating;
-                        enhancedItem.external_ids = tmdbData.external_ids;
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            tmdbData = await response.json();
+                            
+                            // Enhanced poster and backdrop handling following fusion-mdblist-importer pattern
+                            const posterPath = tmdbData.poster_path;
+                            const backdropPath = tmdbData.backdrop_path;
+                            
+                            if (posterPath) {
+                                // Store both the path and full URL
+                                enhancedItem.poster_path = posterPath;
+                                enhancedItem.poster = `https://image.tmdb.org/t/p/w500${posterPath}`;
+                            } else if (item.poster && !item.poster.startsWith('http')) {
+                                // Handle MDBList poster paths that need TMDB base URL
+                                enhancedItem.poster = `https://image.tmdb.org/t/p/w500${item.poster}`;
+                                enhancedItem.poster_path = item.poster;
+                            } else if (item.poster && item.poster.startsWith('http')) {
+                                // Use existing full URL
+                                enhancedItem.poster = item.poster;
+                            }
+                            
+                            if (backdropPath) {
+                                enhancedItem.backdrop_path = backdropPath;
+                                enhancedItem.background = `https://image.tmdb.org/t/p/original${backdropPath}`;
+                            } else if (item.backdrop && !item.backdrop.startsWith('http')) {
+                                // Handle MDBList backdrop paths
+                                enhancedItem.background = `https://image.tmdb.org/t/p/original${item.backdrop}`;
+                            } else if (item.backdrop && item.backdrop.startsWith('http')) {
+                                enhancedItem.background = item.backdrop;
+                            }
+                            
+                            const title = tmdbData.title || tmdbData.name;
+                            const overview = tmdbData.overview;
+                            
+                            // Update other metadata
+                            enhancedItem.title = title || enhancedItem.title;
+                            enhancedItem.name = title || enhancedItem.name;
+                            enhancedItem.description = overview || enhancedItem.description;
+                            enhancedItem.overview = overview || enhancedItem.overview;
+                            enhancedItem.year = tmdbData.release_date?.split('-')[0] || tmdbData.first_air_date?.split('-')[0] || enhancedItem.year;
+                            enhancedItem.genres = tmdbData.genres?.map(g => g.name) || enhancedItem.genres;
+                            enhancedItem.runtime = tmdbData.runtime || tmdbData.episode_run_time?.[0] || enhancedItem.runtime;
+                            enhancedItem.vote_average = tmdbData.vote_average || enhancedItem.vote_average;
+                            enhancedItem.vote_count = tmdbData.vote_count || enhancedItem.vote_count;
+                            enhancedItem.release_date = tmdbData.release_date || tmdbData.first_air_date || enhancedItem.release_date;
+                            
+                            // Additional TMDB metadata
+                            enhancedItem.tagline = tmdbData.tagline;
+                            enhancedItem.status = tmdbData.status;
+                            enhancedItem.production_companies = tmdbData.production_companies?.map(c => c.name);
+                            enhancedItem.external_ids = tmdbData.external_ids;
+                            
+                            console.log(`Enhanced ${title} with TMDB data - Poster: ${enhancedItem.poster ? 'Found' : 'Missing'}`);
+                        } else {
+                            console.warn(`TMDB API request failed for ${enhancedItem.title}: ${response.status}`);
+                        }
                     }
                 } catch (error) {
                     console.warn(`Failed to enhance item ${item.title} with TMDB data:`, error);
                 }
+            } else if (!this.app.tmdbApiKey) {
+                console.warn(`TMDB API key not available - skipping enhancement for ${item.title}`);
             }
 
+            // Ensure poster fallback if no TMDB poster was found
+            if (!enhancedItem.poster || enhancedItem.poster === '' || enhancedItem.poster === 'null') {
+                enhancedItem.poster = '/placeholder-poster.jpg';
+                console.log(`Using placeholder poster for: ${enhancedItem.title}`);
+            }
+            
             enhancedItems.push(enhancedItem);
         }
 
@@ -703,6 +775,46 @@ class MDBListIntegration {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    // Test method to verify TMDB poster fetching
+    async testTmdbPosterFetch(movieId = 550, mediaType = 'movie') {
+        try {
+            console.log(`Testing TMDB poster fetch for ${mediaType} ID: ${movieId}`);
+            
+            const url = `https://api.themoviedb.org/3/${mediaType}/${movieId}?api_key=${this.app.tmdbApiKey}&language=en-US`;
+            
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const posterUrl = data.poster_path ? 
+                    `https://image.tmdb.org/t/p/w500${data.poster_path}` : null;
+                const backdropUrl = data.backdrop_path ? 
+                    `https://image.tmdb.org/t/p/original${data.backdrop_path}` : null;
+                const title = data.title || data.name;
+                const overview = data.overview;
+                
+                console.log('TMDB Test Results:', {
+                    title,
+                    overview: overview?.substring(0, 100) + '...',
+                    posterUrl,
+                    backdropUrl,
+                    poster_path: data.poster_path,
+                    backdrop_path: data.backdrop_path
+                });
+                
+                return {
+                    success: true,
+                    data: { title, overview, posterUrl, backdropUrl }
+                };
+            } else {
+                console.error(`TMDB API test failed: ${response.status}`);
+                return { success: false, error: `API returned ${response.status}` };
+            }
+        } catch (error) {
+            console.error('TMDB test error:', error);
+            return { success: false, error: error.message };
+        }
     }
 }
 

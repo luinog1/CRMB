@@ -83,14 +83,46 @@ class CatalogCarousel {
         carouselItem.dataset.mediaType = mediaType;
         carouselItem.dataset.itemId = item.id;
         
-        // Create image
+        // Create image - enhanced poster handling following fusion-mdblist-importer pattern
         const img = document.createElement('img');
-        const posterPath = item.poster_path;
-        img.src = posterPath 
-            ? `https://image.tmdb.org/t/p/w300${posterPath}`
-            : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMjI1IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+        let posterUrl;
+        
+        // Enhanced poster URL handling with better validation
+        if (item.poster && item.poster.startsWith('http')) {
+            // Use full URL (already complete)
+            posterUrl = item.poster;
+        } else if (item.poster_path && item.poster_path.startsWith('/')) {
+            // TMDB format - construct full URL
+            posterUrl = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+        } else if (item.poster && item.poster.startsWith('/')) {
+            // TMDB path format - construct full URL
+            posterUrl = `https://image.tmdb.org/t/p/w500${item.poster}`;
+        } else if (item.poster && item.poster.length > 0) {
+            // Handle other poster formats - try with leading slash
+            posterUrl = `https://image.tmdb.org/t/p/w500/${item.poster}`;
+        } else {
+            // Fallback to placeholder - use absolute path
+            posterUrl = '/placeholder-poster.jpg';
+        }
+        
+
+        
+        // Log only for MDBList items to reduce noise
+        if (item.title && (item.title.includes('MDBList') || (typeof item.source === 'string' && item.source.toLowerCase().includes('mdb')))) {
+            console.log('MDBList poster debug:', item.title, '- URL:', posterUrl, '- Original:', item.poster);
+        }
+        
+        img.src = posterUrl;
         img.alt = item.title || item.name || 'Media poster';
         img.loading = 'lazy';
+        
+        // Add error handling for failed poster loads
+        img.onerror = function() {
+            if (this.src !== '/placeholder-poster.jpg') {
+                console.warn('Failed to load poster for', item.title, '- trying placeholder');
+                this.src = '/placeholder-poster.jpg';
+            }
+        }
         
         // Create overlay
         const overlay = document.createElement('div');
@@ -102,8 +134,10 @@ class CatalogCarousel {
         
         const year = document.createElement('div');
         year.className = 'carousel-item-year';
-        const releaseDate = item.release_date || item.first_air_date;
-        year.textContent = releaseDate ? new Date(releaseDate).getFullYear() : 'Unknown';
+        // Handle both TMDB and MDBList date formats
+        const releaseDate = item.release_date || item.first_air_date || item.released;
+        const yearValue = item.year || (releaseDate ? new Date(releaseDate).getFullYear() : null);
+        year.textContent = yearValue || 'Unknown';
         
         // Create action buttons
         const actions = document.createElement('div');
@@ -246,10 +280,23 @@ class CatalogCarousel {
         gridItem.dataset.itemId = item.id;
         
         const img = document.createElement('img');
-        const posterPath = item.poster_path;
-        img.src = posterPath 
-            ? `https://image.tmdb.org/t/p/w300${posterPath}`
-            : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMjI1IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+        let posterUrl;
+        
+        if (item.poster && item.poster.startsWith('http')) {
+            // Use enhanced TMDB URL from CatalogManager
+            posterUrl = item.poster;
+        } else if (item.poster_path) {
+            // TMDB format - use high quality
+            posterUrl = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+        } else if (item.poster) {
+            // MDBList format fallback
+            posterUrl = `https://image.tmdb.org/t/p/w500${item.poster}`;
+        } else {
+            // Fallback placeholder
+            posterUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMjI1IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+        }
+        
+        img.src = posterUrl;
         img.alt = item.title || item.name || 'Media poster';
         img.loading = 'lazy';
         

@@ -1,11 +1,13 @@
 class TMDBIntegration {
     constructor(app) {
         this.app = app;
-        this.apiKey = localStorage.getItem('user_tmdb_api_key') || '';
+        // Get API key from app or localStorage
+        this.apiKey = app.tmdbApiKey || localStorage.getItem('user_tmdb_api_key') || localStorage.getItem('tmdb_api_key') || '';
         this.proxyUrl = 'http://localhost:3003';
         this.fallbackUrl = 'https://api.themoviedb.org/3';
         this.imageBaseUrl = 'https://image.tmdb.org/t/p/';
         this.isProxyAvailable = false;
+        console.log('TMDBIntegration: Initialized with API key:', this.apiKey ? 'Present' : 'Missing');
     }
 
     init() {
