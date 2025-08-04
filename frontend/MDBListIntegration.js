@@ -9,6 +9,21 @@ class MDBListIntegration {
         this.savedCatalogs = JSON.parse(localStorage.getItem('mdblist_saved_catalogs') || '[]');
         this.mdbClient = null;
         this.initializeClient();
+        
+        // Initialize cache management
+        this.initializeCacheManagement();
+    }
+
+    initializeCacheManagement() {
+        // Clear expired cache entries on startup
+        this.clearExpiredCache();
+        
+        // Set up periodic cache cleanup (every hour)
+        setInterval(() => {
+            this.clearExpiredCache();
+        }, 60 * 60 * 1000);
+        
+        console.log('MDBListIntegration: Cache management initialized');
     }
 
     async initializeClient() {
@@ -558,7 +573,7 @@ class MDBListIntegration {
                 traktid: item.traktid
             };
             
-            // Enhanced TMDB data fetching with improved poster handling
+            // Enhanced TMDB data fetching with improved poster handling and caching
             if (this.app.tmdbIntegration && this.app.tmdbApiKey && (item.tmdbid || item.imdbid)) {
                 try {
                     let tmdbData;
@@ -566,69 +581,43 @@ class MDBListIntegration {
                     
                     // Convert IMDb ID to TMDB ID if needed
                     if (!movieId && item.imdbid) {
-                        movieId = await this.app.convertImdbToTmdbId(item.imdbid, enhancedItem.type);
+                        movieId = await this.convertImdbToTmdbId(item.imdbid, enhancedItem.type);
                     }
                     
                     if (movieId) {
-                        // Use the updated fetch logic as requested
-                        const mediaType = enhancedItem.type === 'show' ? 'tv' : 'movie';
-                        const url = `https://api.themoviedb.org/3/${mediaType}/${movieId}?api_key=${this.app.tmdbApiKey}&language=en-US`;
+                        // Use the new enhanced TMDB fetching system
+                        const tmdbData = await this.fetchEnhancedTMDBData(movieId, mediaType);
                         
-                        const response = await fetch(url);
-                        if (response.ok) {
-                            tmdbData = await response.json();
+                        if (tmdbData) {
+                            // Use the comprehensive enhancement method
+                            enhancedItem = await this.enhanceItemWithTMDB(enhancedItem, tmdbData);
+                            console.log(`Enhanced ${enhancedItem.title} with comprehensive TMDB data`);
+                        } else {
+                            console.warn(`Failed to fetch TMDB data for ${enhancedItem.title}`);
                             
-                            // Enhanced poster and backdrop handling following fusion-mdblist-importer pattern
-                            const posterPath = tmdbData.poster_path;
-                            const backdropPath = tmdbData.backdrop_path;
-                            
-                            if (posterPath) {
-                                // Store both the path and full URL
-                                enhancedItem.poster_path = posterPath;
-                                enhancedItem.poster = `https://image.tmdb.org/t/p/w500${posterPath}`;
-                            } else if (item.poster && !item.poster.startsWith('http')) {
-                                // Handle MDBList poster paths that need TMDB base URL
+                            // Fallback: handle existing poster/backdrop paths
+                            if (item.poster && !item.poster.startsWith('http')) {
                                 enhancedItem.poster = `https://image.tmdb.org/t/p/w500${item.poster}`;
                                 enhancedItem.poster_path = item.poster;
                             } else if (item.poster && item.poster.startsWith('http')) {
-                                // Use existing full URL
                                 enhancedItem.poster = item.poster;
                             }
                             
-                            if (backdropPath) {
-                                enhancedItem.backdrop_path = backdropPath;
-                                enhancedItem.background = `https://image.tmdb.org/t/p/original${backdropPath}`;
-                            } else if (item.backdrop && !item.backdrop.startsWith('http')) {
-                                // Handle MDBList backdrop paths
+                            if (item.backdrop && !item.backdrop.startsWith('http')) {
                                 enhancedItem.background = `https://image.tmdb.org/t/p/original${item.backdrop}`;
                             } else if (item.backdrop && item.backdrop.startsWith('http')) {
                                 enhancedItem.background = item.backdrop;
                             }
-                            
-                            const title = tmdbData.title || tmdbData.name;
-                            const overview = tmdbData.overview;
-                            
-                            // Update other metadata
-                            enhancedItem.title = title || enhancedItem.title;
-                            enhancedItem.name = title || enhancedItem.name;
-                            enhancedItem.description = overview || enhancedItem.description;
-                            enhancedItem.overview = overview || enhancedItem.overview;
-                            enhancedItem.year = tmdbData.release_date?.split('-')[0] || tmdbData.first_air_date?.split('-')[0] || enhancedItem.year;
-                            enhancedItem.genres = tmdbData.genres?.map(g => g.name) || enhancedItem.genres;
-                            enhancedItem.runtime = tmdbData.runtime || tmdbData.episode_run_time?.[0] || enhancedItem.runtime;
-                            enhancedItem.vote_average = tmdbData.vote_average || enhancedItem.vote_average;
-                            enhancedItem.vote_count = tmdbData.vote_count || enhancedItem.vote_count;
-                            enhancedItem.release_date = tmdbData.release_date || tmdbData.first_air_date || enhancedItem.release_date;
-                            
-                            // Additional TMDB metadata
-                            enhancedItem.tagline = tmdbData.tagline;
-                            enhancedItem.status = tmdbData.status;
-                            enhancedItem.production_companies = tmdbData.production_companies?.map(c => c.name);
-                            enhancedItem.external_ids = tmdbData.external_ids;
-                            
-                            console.log(`Enhanced ${title} with TMDB data - Poster: ${enhancedItem.poster ? 'Found' : 'Missing'}`);
-                        } else {
-                            console.warn(`TMDB API request failed for ${enhancedItem.title}: ${response.status}`);
+                        }
+                    } else if (item.imdb_id) {
+                        // Try to convert IMDb ID to TMDB ID
+                        const tmdbId = await this.convertImdbToTmdbId(item.imdb_id, mediaType);
+                        if (tmdbId) {
+                            const tmdbData = await this.fetchEnhancedTMDBData(tmdbId, mediaType);
+                            if (tmdbData) {
+                                enhancedItem = await this.enhanceItemWithTMDB(enhancedItem, tmdbData);
+                                console.log(`Enhanced ${enhancedItem.title} via IMDb ID conversion`);
+                            }
                         }
                     }
                 } catch (error) {
@@ -777,6 +766,335 @@ class MDBListIntegration {
         return div.innerHTML;
     }
     
+    /**
+     * Cache metadata with expiration
+     */
+    cacheMetadata(key, data, ttlMs) {
+        const cacheItem = {
+            data: data,
+            timestamp: Date.now(),
+            ttl: ttlMs
+        };
+        localStorage.setItem(`mdblist_cache_${key}`, JSON.stringify(cacheItem));
+    }
+
+    /**
+     * Get cached metadata if not expired
+     */
+    getCachedMetadata(key) {
+        try {
+            const cached = localStorage.getItem(`mdblist_cache_${key}`);
+            if (!cached) return null;
+            
+            const cacheItem = JSON.parse(cached);
+            const now = Date.now();
+            
+            if (now - cacheItem.timestamp > cacheItem.ttl) {
+                // Cache expired, remove it
+                localStorage.removeItem(`mdblist_cache_${key}`);
+                return null;
+            }
+            
+            return cacheItem.data;
+        } catch (error) {
+            console.warn('Error reading from cache:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Clear expired cache entries
+     */
+    clearExpiredCache() {
+        const keys = Object.keys(localStorage);
+        const now = Date.now();
+        
+        keys.forEach(key => {
+            if (key.startsWith('mdblist_cache_')) {
+                try {
+                    const cached = localStorage.getItem(key);
+                    if (cached) {
+                        const cacheItem = JSON.parse(cached);
+                        if (now - cacheItem.timestamp > cacheItem.ttl) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                } catch (error) {
+                    // Remove corrupted cache entries
+                    localStorage.removeItem(key);
+                }
+            }
+        });
+    }
+
+    getCacheStatistics() {
+        const keys = Object.keys(localStorage);
+        let totalEntries = 0;
+        let totalSize = 0;
+        let expiredEntries = 0;
+        const now = Date.now();
+        
+        keys.forEach(key => {
+            if (key.startsWith('mdblist_cache_')) {
+                totalEntries++;
+                const value = localStorage.getItem(key);
+                totalSize += value.length;
+                
+                try {
+                    const data = JSON.parse(value);
+                    if (data.expiry && data.expiry < now) {
+                        expiredEntries++;
+                    }
+                } catch (e) {
+                    expiredEntries++;
+                }
+            }
+        });
+        
+        return {
+            totalEntries,
+            expiredEntries,
+            activeEntries: totalEntries - expiredEntries,
+            totalSizeKB: Math.round(totalSize / 1024),
+            averageSizeKB: totalEntries > 0 ? Math.round(totalSize / totalEntries / 1024) : 0
+        };
+    }
+
+    /**
+     * Enhanced TMDB metadata fetching with comprehensive data
+     */
+    async fetchEnhancedTMDBData(tmdbId, mediaType) {
+        if (!this.app.tmdbApiKey || !tmdbId) return null;
+        
+        const cacheKey = `tmdb_${mediaType}_${tmdbId}`;
+        
+        // Check cache first
+        let cachedData = this.getMetadataFromCache(cacheKey);
+        if (cachedData) {
+            console.log(`Using cached TMDB data for ${mediaType} ${tmdbId}`);
+            return cachedData;
+        }
+        
+        try {
+            // Fetch comprehensive data with all appendable responses
+            const appendToResponse = [
+                'credits',
+                'keywords', 
+                'external_ids',
+                'videos',
+                'images',
+                'recommendations',
+                'similar',
+                'watch/providers'
+            ].join(',');
+            
+            const url = `https://api.themoviedb.org/3/${mediaType}/${tmdbId}?api_key=${this.app.tmdbApiKey}&language=en-US&append_to_response=${appendToResponse}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`TMDB API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Cache for 24 hours
+            this.cacheMetadata(cacheKey, data, 24 * 60 * 60 * 1000);
+            
+            console.log(`Fetched enhanced TMDB data for ${mediaType} ${tmdbId}`);
+            return data;
+            
+        } catch (error) {
+            console.warn(`Failed to fetch TMDB data for ${mediaType} ${tmdbId}:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Process and enhance item with comprehensive TMDB metadata
+     */
+    async enhanceItemWithTMDB(item, tmdbData) {
+        if (!tmdbData) return item;
+        
+        const enhancedItem = { ...item };
+        const mediaType = item.type === 'show' ? 'tv' : 'movie';
+        
+        // Basic metadata
+        const title = tmdbData.title || tmdbData.name;
+        enhancedItem.title = title || enhancedItem.title;
+        enhancedItem.name = title || enhancedItem.name;
+        enhancedItem.description = tmdbData.overview || enhancedItem.description;
+        enhancedItem.overview = tmdbData.overview || enhancedItem.overview;
+        enhancedItem.year = tmdbData.release_date?.split('-')[0] || tmdbData.first_air_date?.split('-')[0] || enhancedItem.year;
+        
+        // Images with multiple sizes
+        if (tmdbData.poster_path) {
+            enhancedItem.poster_path = tmdbData.poster_path;
+            enhancedItem.poster = `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}`;
+            enhancedItem.poster_original = `https://image.tmdb.org/t/p/original${tmdbData.poster_path}`;
+        }
+        
+        if (tmdbData.backdrop_path) {
+            enhancedItem.backdrop_path = tmdbData.backdrop_path;
+            enhancedItem.background = `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}`;
+            enhancedItem.backdrop = `https://image.tmdb.org/t/p/w1280${tmdbData.backdrop_path}`;
+        }
+        
+        // Ratings and popularity
+        enhancedItem.vote_average = tmdbData.vote_average || enhancedItem.vote_average;
+        enhancedItem.vote_count = tmdbData.vote_count || enhancedItem.vote_count;
+        enhancedItem.popularity = tmdbData.popularity;
+        
+        // Genres
+        enhancedItem.genres = tmdbData.genres?.map(g => g.name) || enhancedItem.genres;
+        enhancedItem.genre_ids = tmdbData.genres?.map(g => g.id) || [];
+        
+        // Runtime/Duration
+        enhancedItem.runtime = tmdbData.runtime || tmdbData.episode_run_time?.[0] || enhancedItem.runtime;
+        
+        // Release information
+        enhancedItem.release_date = tmdbData.release_date || tmdbData.first_air_date || enhancedItem.release_date;
+        enhancedItem.status = tmdbData.status;
+        
+        // Additional metadata
+        enhancedItem.tagline = tmdbData.tagline;
+        enhancedItem.homepage = tmdbData.homepage;
+        enhancedItem.original_language = tmdbData.original_language;
+        enhancedItem.original_title = tmdbData.original_title || tmdbData.original_name;
+        
+        // Production information
+        enhancedItem.production_companies = tmdbData.production_companies?.map(c => ({
+            id: c.id,
+            name: c.name,
+            logo_path: c.logo_path,
+            origin_country: c.origin_country
+        }));
+        
+        enhancedItem.production_countries = tmdbData.production_countries?.map(c => c.name);
+        enhancedItem.spoken_languages = tmdbData.spoken_languages?.map(l => l.english_name);
+        
+        // Cast and crew (from credits)
+        if (tmdbData.credits) {
+            enhancedItem.cast = tmdbData.credits.cast?.slice(0, 10).map(person => ({
+                id: person.id,
+                name: person.name,
+                character: person.character,
+                profile_path: person.profile_path,
+                order: person.order
+            }));
+            
+            enhancedItem.crew = tmdbData.credits.crew?.filter(person => 
+                ['Director', 'Producer', 'Executive Producer', 'Writer', 'Screenplay'].includes(person.job)
+            ).map(person => ({
+                id: person.id,
+                name: person.name,
+                job: person.job,
+                department: person.department,
+                profile_path: person.profile_path
+            }));
+            
+            // Extract key personnel
+            const directors = tmdbData.credits.crew?.filter(p => p.job === 'Director').map(p => p.name);
+            const writers = tmdbData.credits.crew?.filter(p => ['Writer', 'Screenplay'].includes(p.job)).map(p => p.name);
+            
+            enhancedItem.directors = directors;
+            enhancedItem.writers = writers;
+        }
+        
+        // Keywords
+        if (tmdbData.keywords) {
+            const keywordList = tmdbData.keywords.keywords || tmdbData.keywords.results || [];
+            enhancedItem.keywords = keywordList.map(k => k.name);
+        }
+        
+        // External IDs
+        if (tmdbData.external_ids) {
+            enhancedItem.external_ids = tmdbData.external_ids;
+            enhancedItem.imdb_id = tmdbData.external_ids.imdb_id;
+        }
+        
+        // Videos (trailers, teasers)
+        if (tmdbData.videos?.results) {
+            const trailers = tmdbData.videos.results.filter(v => 
+                v.type === 'Trailer' && v.site === 'YouTube'
+            ).slice(0, 3);
+            
+            enhancedItem.trailers = trailers.map(t => ({
+                key: t.key,
+                name: t.name,
+                site: t.site,
+                type: t.type,
+                url: `https://www.youtube.com/watch?v=${t.key}`
+            }));
+        }
+        
+        // Watch providers
+        if (tmdbData['watch/providers']?.results?.US) {
+            const providers = tmdbData['watch/providers'].results.US;
+            enhancedItem.watch_providers = {
+                flatrate: providers.flatrate?.map(p => p.provider_name),
+                rent: providers.rent?.map(p => p.provider_name),
+                buy: providers.buy?.map(p => p.provider_name)
+            };
+        }
+        
+        // TV Show specific data
+        if (mediaType === 'tv' && tmdbData.number_of_seasons) {
+            enhancedItem.number_of_seasons = tmdbData.number_of_seasons;
+            enhancedItem.number_of_episodes = tmdbData.number_of_episodes;
+            enhancedItem.episode_run_time = tmdbData.episode_run_time;
+            enhancedItem.in_production = tmdbData.in_production;
+            enhancedItem.last_air_date = tmdbData.last_air_date;
+            enhancedItem.next_episode_to_air = tmdbData.next_episode_to_air;
+        }
+        
+        // Movie specific data
+        if (mediaType === 'movie') {
+            enhancedItem.budget = tmdbData.budget;
+            enhancedItem.revenue = tmdbData.revenue;
+            enhancedItem.belongs_to_collection = tmdbData.belongs_to_collection;
+        }
+        
+        return enhancedItem;
+    }
+
+    /**
+     * Convert IMDb ID to TMDB ID
+     */
+    async convertImdbToTmdbId(imdbId, mediaType) {
+        if (!this.app.tmdbApiKey || !imdbId) return null;
+        
+        const cacheKey = `imdb_to_tmdb_${imdbId}`;
+        const cached = this.getMetadataFromCache(cacheKey);
+        if (cached) return cached;
+        
+        try {
+            const url = `https://api.themoviedb.org/3/find/${imdbId}?api_key=${this.app.tmdbApiKey}&external_source=imdb_id`;
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                const data = await response.json();
+                let tmdbId = null;
+                
+                if (mediaType === 'movie' && data.movie_results?.length > 0) {
+                    tmdbId = data.movie_results[0].id;
+                } else if (mediaType === 'show' && data.tv_results?.length > 0) {
+                    tmdbId = data.tv_results[0].id;
+                }
+                
+                if (tmdbId) {
+                    // Cache for 7 days
+                    this.cacheMetadata(cacheKey, tmdbId, 7 * 24 * 60 * 60 * 1000);
+                }
+                
+                return tmdbId;
+            }
+        } catch (error) {
+            console.warn(`Failed to convert IMDb ID ${imdbId} to TMDB ID:`, error);
+        }
+        
+        return null;
+    }
+
     // Test method to verify TMDB poster fetching
     async testTmdbPosterFetch(movieId = 550, mediaType = 'movie') {
         try {

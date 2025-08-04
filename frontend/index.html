@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
 
 </head>
 <body>
@@ -98,14 +100,22 @@
                 <div class="search-container">
                     <div class="search-header">
                         <h1>Search</h1>
-                        <div class="search-input-container">
-                            <input type="text" id="search-input" placeholder="Search movies, series, and more..." autocomplete="off" aria-label="Search content" aria-describedby="search-hint">
-                            <button id="search-button" aria-label="Search">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
-                            </button>
+                        <div class="search-form-container">
+                            <form class="search-form flex bg-zinc-800 border border-zinc-700 text-white rounded-md shadow text-sm" id="search-form">
+                                <div aria-disabled="true" class="w-10 grid place-content-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="limegreen" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <path d="m21 21-4.3-4.3"></path>
+                                    </svg>
+                                </div>
+                                <input type="text" spellcheck="false" name="text" id="search-input" class="bg-transparent py-1.5 outline-none placeholder:text-zinc-400 w-20 focus:w-48 transition-all" placeholder="Search..." autocomplete="off" aria-label="Search content" aria-describedby="search-hint">
+                                <button class="w-10 grid place-content-center" aria-label="Clear input button" type="reset" id="search-clear">
+                                    <svg stroke-linejoin="round" stroke-linecap="round" stroke-width="2" stroke="limegreen" fill="none" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M18 6 6 18"></path>
+                                        <path d="m6 6 12 12"></path>
+                                    </svg>
+                                </button>
+                            </form>
                         </div>
                         <div class="search-hint" id="search-hint">
                             Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (or <kbd>Cmd</kbd>+<kbd>K</kbd>) to focus search

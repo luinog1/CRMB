@@ -15,7 +15,8 @@ class SearchTab {
 
     init() {
         this.searchInput = document.getElementById('search-input');
-        this.searchButton = document.getElementById('search-button');
+        this.searchForm = document.getElementById('search-form');
+        this.searchClear = document.getElementById('search-clear');
         this.searchResults = document.querySelector('.search-results');
         this.filterButtons = document.querySelectorAll('.filter-btn');
         
@@ -30,16 +31,24 @@ class SearchTab {
             this.handleSearchInput(e.target.value);
         });
 
-        // Search button click
-        this.searchButton.addEventListener('click', () => {
+        // Form submission
+        this.searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
             this.performSearch(this.searchInput.value);
         });
 
         // Enter key search
         this.searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 this.performSearch(this.searchInput.value);
             }
+        });
+
+        // Clear button functionality
+        this.searchClear.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.clearSearch();
         });
 
         // Filter buttons
@@ -52,13 +61,16 @@ class SearchTab {
             });
         });
 
-        // Focus management
+        // Focus management for expanding effect
         this.searchInput.addEventListener('focus', () => {
-            this.searchInput.parentElement.classList.add('focused');
+            this.searchForm.classList.add('focused');
         });
 
         this.searchInput.addEventListener('blur', () => {
-            this.searchInput.parentElement.classList.remove('focused');
+            // Only remove focus if input is empty
+            if (!this.searchInput.value.trim()) {
+                this.searchForm.classList.remove('focused');
+            }
         });
     }
 
@@ -245,26 +257,8 @@ class SearchTab {
                     <path d="m21 21-4.35-4.35"></path>
                 </svg>
                 <p>Search for movies, TV shows, and more...</p>
-                <div class="search-suggestions">
-                    <p>Try searching for:</p>
-                    <div class="suggestion-tags">
-                        <span class="suggestion-tag">Marvel</span>
-                        <span class="suggestion-tag">Breaking Bad</span>
-                        <span class="suggestion-tag">The Office</span>
-                        <span class="suggestion-tag">Inception</span>
-                    </div>
-                </div>
             </div>
         `;
-
-        // Add click handlers for suggestions
-        const suggestionTags = this.searchResults.querySelectorAll('.suggestion-tag');
-        suggestionTags.forEach(tag => {
-            tag.addEventListener('click', () => {
-                this.searchInput.value = tag.textContent;
-                this.performSearch(tag.textContent);
-            });
-        });
     }
 
     displayLoading() {
@@ -336,7 +330,9 @@ class SearchTab {
     clearSearch() {
         this.searchInput.value = '';
         this.currentQuery = '';
+        this.searchForm.classList.remove('focused');
         this.displayPlaceholder();
+        this.searchInput.blur();
     }
 }
 

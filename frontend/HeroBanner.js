@@ -73,94 +73,81 @@ class HeroBanner {
         }
 
         container.innerHTML = `
-            <img src="${backdropUrl}" alt="${title}" class="hero-backdrop" loading="eager">
-            <div class="hero-gradient"></div>
-            <div class="hero-content">
-                <div class="hero-info">
-                    <h1 class="hero-title">${title}</h1>
-                    <div class="hero-meta">
-                        <span class="hero-type">${media.media_type === 'movie' ? 'Movie' : 'TV Series'}</span>
-                        <span class="hero-year">${this.app.formatDate(releaseDate)}</span>
-                        ${additionalInfo ? `<span class="hero-runtime">${additionalInfo}</span>` : ''}
-                        <span class="hero-rating">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                            ${this.app.formatRating(media.vote_average)}
-                        </span>
+            <section id="hero" class="relative h-[60vh] w-full overflow-hidden rounded-xl shadow-lg mb-6 bg-black">
+                <img 
+                    id="hero-bg" 
+                    src="${backdropUrl}" 
+                    alt="${title}" 
+                    class="absolute inset-0 w-full h-full object-cover z-0 opacity-70" 
+                />
+                <div class="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent z-10"></div>
+                
+                <div class="relative z-20 px-10 py-16 flex flex-col justify-center max-w-4xl">
+                    <h1 id="hero-title" class="text-white text-4xl md:text-5xl font-bold mb-3 font-['Lobster']">${title}</h1>
+                    <p id="hero-overview" class="text-zinc-300 text-lg mb-5">${this.truncateText(media.overview, 200)}</p>
+                    <div class="flex gap-4">
+                        <button 
+                            onclick="app.showStreamOptions('${media.media_type}', ${media.id})" 
+                            class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full transition-colors duration-200 flex items-center gap-2">
+                            <span>▶</span> Play
+                        </button>
+                        <button 
+                            onclick="app.showMediaDetails('${media.media_type}', ${media.id})" 
+                            class="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full transition-colors duration-200 flex items-center gap-2">
+                            <span>🎬</span> Find Streams
+                        </button>
                     </div>
-                    <p class="hero-overview">${this.truncateText(media.overview, 180)}</p>
                 </div>
-                <div class="hero-actions">
-                    <button class="hero-btn hero-btn-primary" onclick="app.showStreamOptions('${media.media_type}', ${media.id})">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z"/>
-                        </svg>
-                        <span>Watch Now</span>
-                    </button>
-                    <button class="hero-btn hero-btn-secondary" onclick="app.openMediaDetails('${media.media_type}', ${media.id})">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 16v-4"/>
-                            <path d="M12 8h.01"/>
-                        </svg>
-                        <span>More Info</span>
-                    </button>
-                    <button class="hero-btn hero-btn-tertiary" onclick="app.addToWatchlist('${media.media_type}', ${media.id})">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/>
-                        </svg>
-                        <span>Watchlist</span>
-                    </button>
-                </div>
-                ${this.featuredItems && this.featuredItems.length > 1 ? this.createHeroIndicators() : ''}
-            </div>
+            </section>
         `;
 
-        // Add fade-in animation
-        container.classList.add('fade-in');
-        
-        // Preload next image for smooth transitions
-        this.preloadNextImage();
+        // Add hero indicators if we have multiple featured items
+        if (this.featuredItems && this.featuredItems.length > 1) {
+            this.createHeroIndicators();
+        }
     }
 
     createHeroIndicators() {
-        const currentIndex = this.featuredItems.findIndex(item => item.id === this.currentMedia.id);
-        
-        return `
-            <div class="hero-indicators">
-                ${this.featuredItems.map((item, index) => `
-                    <button class="hero-indicator ${index === currentIndex ? 'active' : ''}" 
-                            onclick="heroBanner.loadHeroContent(heroBanner.featuredItems[${index}]); heroBanner.resetAutoRotation();">
-                    </button>
+        const container = document.getElementById('hero-banner');
+        if (!container) return;
+
+        const indicatorsHtml = `
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-30">
+                ${this.featuredItems.map((_, index) => `
+                    <button 
+                        class="w-3 h-3 rounded-full transition-all duration-200 ${
+                            index === 0 ? 'bg-white' : 'bg-white/50'
+                        }" 
+                        onclick="heroBanner.loadHeroContent(heroBanner.featuredItems[${index}]); heroBanner.resetAutoRotation();"
+                    ></button>
                 `).join('')}
             </div>
         `;
+        
+        container.insertAdjacentHTML('beforeend', indicatorsHtml);
     }
 
     preloadNextImage() {
-        if (!this.featuredItems || this.featuredItems.length <= 1) return;
-        
-        const currentIndex = this.featuredItems.findIndex(item => item.id === this.currentMedia.id);
-        const nextIndex = (currentIndex + 1) % this.featuredItems.length;
-        const nextItem = this.featuredItems[nextIndex];
-        
-        if (nextItem && nextItem.backdrop_path) {
-            const img = new Image();
-            img.src = this.app.getBackdropUrl(nextItem.backdrop_path);
+        if (this.featuredItems && this.featuredItems.length > 1) {
+            const currentIndex = this.featuredItems.findIndex(item => item.id === this.currentMedia?.id);
+            const nextIndex = (currentIndex + 1) % this.featuredItems.length;
+            const nextItem = this.featuredItems[nextIndex];
+            
+            if (nextItem?.backdrop_path) {
+                const img = new Image();
+                img.src = this.app.getBackdropUrl(nextItem.backdrop_path);
+            }
         }
     }
 
     startAutoRotation() {
-        if (!this.featuredItems || this.featuredItems.length <= 1) return;
-        
-        this.stopAutoRotation();
-        
-        this.autoRotateInterval = setInterval(() => {
-            const currentIndex = this.featuredItems.findIndex(item => item.id === this.currentMedia.id);
-            const nextIndex = (currentIndex + 1) % this.featuredItems.length;
-            this.loadHeroContent(this.featuredItems[nextIndex]);
-        }, this.rotationDelay);
+        if (this.featuredItems && this.featuredItems.length > 1) {
+            this.autoRotateInterval = setInterval(() => {
+                const currentIndex = this.featuredItems.findIndex(item => item.id === this.currentMedia?.id);
+                const nextIndex = (currentIndex + 1) % this.featuredItems.length;
+                this.loadHeroContent(this.featuredItems[nextIndex]);
+            }, this.rotationDelay);
+        }
     }
 
     stopAutoRotation() {
@@ -180,130 +167,95 @@ class HeroBanner {
         if (!container) return;
 
         container.innerHTML = `
-            <div class="hero-content fallback">
-                <h1 class="hero-title">Welcome to CRUMBLE</h1>
-                <p class="hero-overview">Your ultimate destination for streaming movies and TV series. Discover trending content, manage your watchlist, and enjoy seamless playback with multiple streaming sources.</p>
-                <div class="hero-actions">
-                    <button class="btn-primary" onclick="app.switchTab('search')">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/>
-                            <path d="m21 21-4.35-4.35"/>
-                        </svg>
-                        Start Exploring
-                    </button>
-                    <button class="btn-secondary" onclick="app.switchTab('settings')">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"/>
-                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
-                        </svg>
-                        Settings
-                    </button>
+            <section id="hero" class="relative h-[60vh] w-full overflow-hidden rounded-xl shadow-lg mb-6 bg-black">
+                <img 
+                    id="hero-bg" 
+                    src="https://image.tmdb.org/t/p/original/s3TBrRGB1iav7gFOCNx3H31MoES.jpg" 
+                    alt="CRUMBLE" 
+                    class="absolute inset-0 w-full h-full object-cover z-0 opacity-70" 
+                />
+                <div class="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent z-10"></div>
+                
+                <div class="relative z-20 px-10 py-16 flex flex-col justify-center max-w-4xl">
+                    <h1 id="hero-title" class="text-white text-4xl md:text-5xl font-bold mb-3 font-['Lobster']">CRUMBLE</h1>
+                    <p id="hero-overview" class="text-zinc-300 text-lg mb-5">Your ultimate destination for streaming movies and TV series. Discover trending content, explore vast catalogs, and enjoy seamless streaming experience.</p>
+                    <div class="flex gap-4">
+                        <button 
+                            onclick="app.switchTab('search')" 
+                            class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full transition-colors duration-200 flex items-center gap-2">
+                            <span>🔍</span> Explore Content
+                        </button>
+                        <button 
+                            onclick="app.switchTab('settings')" 
+                            class="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full transition-colors duration-200 flex items-center gap-2">
+                            <span>⚙️</span> Settings
+                        </button>
+                    </div>
                 </div>
-            </div>
+            </section>
         `;
-
-        // Add CSS for fallback hero
-        this.addFallbackCSS();
-    }
-
-    addFallbackCSS() {
-        if (document.getElementById('hero-fallback-styles')) return;
-
-        const style = document.createElement('style');
-        style.id = 'hero-fallback-styles';
-        style.textContent = `
-            .hero-content.fallback {
-                background: linear-gradient(135deg, var(--secondary-bg) 0%, var(--tertiary-bg) 100%);
-                text-align: center;
-                padding: 80px 40px;
-                border-radius: var(--border-radius);
-                margin: 40px;
-            }
-
-            .hero-indicators {
-                display: flex;
-                justify-content: center;
-                gap: 12px;
-                margin-top: 32px;
-            }
-
-            .hero-indicator {
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                border: 2px solid rgba(255, 255, 255, 0.3);
-                background: transparent;
-                cursor: pointer;
-                transition: var(--transition);
-            }
-
-            .hero-indicator.active {
-                background: var(--accent-green);
-                border-color: var(--accent-green);
-            }
-
-            .hero-indicator:hover {
-                border-color: var(--accent-green);
-                transform: scale(1.2);
-            }
-        `;
-
-        document.head.appendChild(style);
     }
 
     truncateText(text, maxLength) {
-        if (!text || text.length <= maxLength) return text;
-        return text.substring(0, maxLength).trim() + '...';
+        if (!text) return '';
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     }
 
-    // Method to manually set hero content
     async setHeroContent(mediaType, mediaId) {
         try {
             const endpoint = mediaType === 'movie' ? `/movie/${mediaId}` : `/tv/${mediaId}`;
             const media = await this.app.fetchFromTMDB(endpoint);
-            
-            if (media) {
-                media.media_type = mediaType;
-                await this.loadHeroContent(media);
-                this.stopAutoRotation(); // Stop auto-rotation when manually set
-            }
+            media.media_type = mediaType;
+            await this.loadHeroContent(media);
         } catch (error) {
             console.error('Error setting hero content:', error);
+            this.loadFallbackHero();
         }
     }
 
-    // Method to add custom hero content
     addCustomHero(title, overview, backdropUrl, actions = []) {
         const container = document.getElementById('hero-banner');
         if (!container) return;
 
-        const actionsHTML = actions.map(action => `
-            <button class="${action.class || 'btn-primary'}" onclick="${action.onclick || ''}">
+        const actionsHtml = actions.map(action => `
+            <button 
+                onclick="${action.onclick}" 
+                class="${
+                    action.primary 
+                        ? 'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full transition-colors duration-200 flex items-center gap-2' 
+                        : 'bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full transition-colors duration-200 flex items-center gap-2'
+                }"
+            >
                 ${action.icon || ''}
-                ${action.text}
+                <span>${action.text}</span>
             </button>
         `).join('');
 
         container.innerHTML = `
-            <img src="${backdropUrl}" alt="${title}" class="hero-backdrop" loading="eager">
-            <div class="hero-content">
-                <h1 class="hero-title">${title}</h1>
-                <p class="hero-overview">${overview}</p>
-                <div class="hero-actions">
-                    ${actionsHTML}
+            <section id="hero" class="relative h-[60vh] w-full overflow-hidden rounded-xl shadow-lg mb-6 bg-black">
+                <img 
+                    id="hero-bg" 
+                    src="${backdropUrl}" 
+                    alt="${title}" 
+                    class="absolute inset-0 w-full h-full object-cover z-0 opacity-70" 
+                />
+                <div class="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent z-10"></div>
+                
+                <div class="relative z-20 px-10 py-16 flex flex-col justify-center max-w-4xl">
+                    <h1 id="hero-title" class="text-white text-4xl md:text-5xl font-bold mb-3 font-['Lobster']">${title}</h1>
+                    <p id="hero-overview" class="text-zinc-300 text-lg mb-5">${overview}</p>
+                    <div class="flex gap-4">
+                        ${actionsHtml}
+                    </div>
                 </div>
-            </div>
+            </section>
         `;
-
-        this.stopAutoRotation();
     }
 
-    // Method to refresh hero content
     async refresh() {
         await this.loadFeaturedContent();
     }
 
-    // Cleanup method
     destroy() {
         this.stopAutoRotation();
         this.currentMedia = null;
